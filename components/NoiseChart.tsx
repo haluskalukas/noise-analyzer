@@ -56,14 +56,50 @@ export function NoiseChart({ data, filter, showAverage = true, deletedIndices, o
     return 10 * Math.log10(avgPower);
   }, [filteredData]);
 
-  const stats = useMemo(() => {
-    if (filteredData.length === 0) return { min: 0, max: 100 };
-    const values = filteredData.map(p => p.value);
+  // Calculate visible data range for zoom-based statistics
+  const visibleStats = useMemo(() => {
+    if (filteredData.length === 0) return {
+      min: 0, max: 100, leq: 0, l5: 0, l10: 0, l90: 0, l95: 0, count: 0
+    };
+
+    // Calculate which data points are currently visible
+    const visibleDataPoints = Math.ceil(filteredData.length / zoom);
+    const maxPan = Math.max(0, filteredData.length - visibleDataPoints);
+    const currentPan = Math.max(0, Math.min(pan, maxPan));
+
+    const startIdx = Math.floor(currentPan);
+    const endIdx = Math.min(filteredData.length, startIdx + visibleDataPoints);
+    const visibleData = filteredData.slice(startIdx, endIdx);
+
+    if (visibleData.length === 0) return {
+      min: 0, max: 100, leq: 0, l5: 0, l10: 0, l90: 0, l95: 0, count: 0
+    };
+
+    const values = visibleData.map(p => p.value);
+    const sortedValues = [...values].sort((a, b) => a - b);
+
+    // Calculate logarithmic average (Leq)
+    const sumOfPowers = visibleData.reduce((sum, p) => sum + Math.pow(10, p.value / 10), 0);
+    const leq = 10 * Math.log10(sumOfPowers / visibleData.length);
+
+    // Calculate acoustic percentiles (reversed for acoustic notation)
+    const getAcousticPercentile = (acousticPercentile: number) => {
+      const statisticalPercentile = 1 - (acousticPercentile / 100);
+      const index = Math.floor(sortedValues.length * statisticalPercentile);
+      return sortedValues[Math.min(index, sortedValues.length - 1)];
+    };
+
     return {
       min: Math.min(...values),
       max: Math.max(...values),
+      leq,
+      l5: getAcousticPercentile(5),
+      l10: getAcousticPercentile(10),
+      l90: getAcousticPercentile(90),
+      l95: getAcousticPercentile(95),
+      count: visibleData.length
     };
-  }, [filteredData]);
+  }, [filteredData, zoom, pan]);
 
   // Handle canvas resize
   useEffect(() => {
@@ -369,7 +405,7 @@ export function NoiseChart({ data, filter, showAverage = true, deletedIndices, o
       }
     }
 
-  }, [filteredData, zoom, pan, average, showAverage, canvasSize, hoveredPoint, stats, isDragging, dragMode, dragStartPos, currentMousePos]);
+  }, [filteredData, zoom, pan, average, showAverage, canvasSize, hoveredPoint, visibleStats, isDragging, dragMode, dragStartPos, currentMousePos]);
 
   // Mouse handlers
   const handleMouseDown = (e: React.MouseEvent<HTMLCanvasElement>) => {
@@ -679,22 +715,55 @@ export function NoiseChart({ data, filter, showAverage = true, deletedIndices, o
         />
       </div>
 
-      {/* Stats */}
-      <div className="grid grid-cols-3 gap-4 text-center">
-        <div className="p-4 bg-gradient-to-br from-blue-50 to-blue-100 rounded-xl shadow-sm border border-blue-200">
-          <p className="text-xs text-blue-700 font-medium">Počet bodů</p>
-          <p className="text-3xl font-bold text-blue-600">{filteredData.length}</p>
+      {/* Stats for visible data */}
+      <div>
+        <div className="mb-3 flex items-center justify-between">
+          <h4 className="text-sm font-semibold text-gray-700">
+            {zoom > 1 ? '📊 Statistiky viditelné oblasti' : '📊 Celkové statistiky'}
+          </h4>
+          {zoom > 1 && (
+            <span className="text-xs bg-purple-100 text-purple-700 px-2 py-1 rounded-full font-medium">
+              Zobrazeno: {visibleStats.count} z {filteredData.length} bodů
+            </span>
+          )}
         </div>
-        <div className="p-4 bg-gradient-to-br from-amber-50 to-amber-100 rounded-xl shadow-sm border border-amber-200">
-          <p className="text-xs text-amber-700 font-medium">Průměr (Leq)</p>
-          <p className="text-3xl font-bold text-amber-600">{average.toFixed(1)} dB</p>
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+          <div className="p-3 bg-gradient-to-br from-blue-50 to-blue-100 rounded-lg shadow-sm border border-blue-200">
+            <p className="text-xs text-blue-700 font-medium mb-1">L<sub>eq</sub></p>
+            <p className="text-2xl font-bold text-blue-600">{visibleStats.leq.toFixed(1)}</p>
+            <p className="text-xs text-blue-600">dB</p>
+          </div>
+          <div className="p-3 bg-gradient-to-br from-purple-50 to-purple-100 rounded-lg shadow-sm border border-purple-200">
+            <p className="text-xs text-purple-700 font-medium mb-1">L<sub>5</sub></p>
+            <p className="text-2xl font-bold text-purple-600">{visibleStats.l5.toFixed(1)}</p>
+            <p className="text-xs text-purple-600">dB</p>
+          </div>
+          <div className="p-3 bg-gradient-to-br from-indigo-50 to-indigo-100 rounded-lg shadow-sm border border-indigo-200">
+            <p className="text-xs text-indigo-700 font-medium mb-1">L<sub>10</sub></p>
+            <p className="text-2xl font-bold text-indigo-600">{visibleStats.l10.toFixed(1)}</p>
+            <p className="text-xs text-indigo-600">dB</p>
+          </div>
+          <div className="p-3 bg-gradient-to-br from-teal-50 to-teal-100 rounded-lg shadow-sm border border-teal-200">
+            <p className="text-xs text-teal-700 font-medium mb-1">L<sub>90</sub></p>
+            <p className="text-2xl font-bold text-teal-600">{visibleStats.l90.toFixed(1)}</p>
+            <p className="text-xs text-teal-600">dB</p>
+          </div>
+          <div className="p-3 bg-gradient-to-br from-green-50 to-green-100 rounded-lg shadow-sm border border-green-200">
+            <p className="text-xs text-green-700 font-medium mb-1">L<sub>95</sub></p>
+            <p className="text-2xl font-bold text-green-600">{visibleStats.l95.toFixed(1)}</p>
+            <p className="text-xs text-green-600">dB</p>
+          </div>
+          <div className="p-3 bg-gradient-to-br from-gray-50 to-gray-100 rounded-lg shadow-sm border border-gray-200">
+            <p className="text-xs text-gray-700 font-medium mb-1">Počet</p>
+            <p className="text-2xl font-bold text-gray-700">{visibleStats.count}</p>
+            <p className="text-xs text-gray-600">bodů</p>
+          </div>
         </div>
-        <div className="p-4 bg-gradient-to-br from-gray-50 to-gray-100 rounded-xl shadow-sm border border-gray-200">
-          <p className="text-xs text-gray-700 font-medium">Rozsah</p>
-          <p className="text-3xl font-bold text-gray-700">
-            {stats.min.toFixed(0)} - {stats.max.toFixed(0)} dB
+        {zoom > 1 && (
+          <p className="mt-2 text-xs text-gray-600 italic">
+            💡 Statistiky se automaticky přepočítávají podle viditelné oblasti v grafu
           </p>
-        </div>
+        )}
       </div>
     </div>
   );
