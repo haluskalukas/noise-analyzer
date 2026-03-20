@@ -1,36 +1,91 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# 📊 Analyzátor hluku
 
-## Getting Started
+Interaktivní webová aplikace pro analýzu měření hladiny hluku z Excel souborů.
 
-First, run the development server:
+## ✨ Funkce
+
+- **📁 Import Excel souborů** - Nahraj .xlsx, .xls nebo .csv soubory s daty
+- **📈 Interaktivní grafy** - Vizualizace dat s Recharts
+- **⏰ Filtrování času** - Celý den / Den (6-22h) / Noc (22-6h)
+- **📊 Kompletní statistiky**:
+  - Min, Max, Leq (logaritmický průměr), Medián
+  - Percentily (5., 10., 90., 95.) pro každou hodinu
+  - Denní vs. Noční Leq
+  - Hodinové Leq + percentily
+- **🎨 Moderní UI** - Responzivní design s Tailwind CSS
+- **⚠️ Správné průměrování** - Logaritmické pro decibely!
+
+## 🚀 Spuštění
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+# Instalace závislostí
+bun install
+
+# Spuštění dev serveru
+bun run dev
+
+# Otevři http://localhost:3000
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## 📄 Formát Excel souboru
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+Aplikace očekává Excel soubor s těmito sloupci:
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+### Formát 1 (Datum + Čas odděleně):
+| Datum      | Čas  | Hodnota |
+|------------|------|---------|
+| 14.3.2026  | 8:00 | 55.2    |
+| 14.3.2026  | 8:15 | 57.8    |
 
-## Learn More
+### Formát 2 (Datum+Čas dohromady):
+| Datum a čas        | Hodnota |
+|--------------------|---------|
+| 14.3.2026 8:00     | 55.2    |
+| 14.3.2026 8:15     | 57.8    |
 
-To learn more about Next.js, take a look at the following resources:
+## 🔬 Logaritmické průměrování
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+**DŮLEŽITÉ:** Decibely se nesmí průměrovat aritmeticky!
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+Aplikace používá správný logaritmický vzorec pro výpočet ekvivalentní hladiny hluku:
 
-## Deploy on Vercel
+```
+Leq = 10 × log₁₀(1/n × Σ 10^(Li/10))
+```
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+Kde:
+- **Leq** = ekvivalentní hladina hluku (dB)
+- **n** = počet měření
+- **Li** = jednotlivá měřená hodnota (dB)
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+### Proč logaritmicky?
+
+Decibely jsou logaritmická jednotka. Zvýšení o 3 dB = dvojnásobek energie!
+
+**Příklad:**
+- Aritmetický průměr z `[60, 70]` = 65 dB ❌ (ŠPATNĚ)
+- Logaritmický průměr z `[60, 70]` = 66.9 dB ✅ (SPRÁVNĚ)
+
+## 📊 Statistické ukazatele (akustická notace)
+
+⚠️ **DŮLEŽITÉ:** V akustice jsou percentily obrácené oproti statistice!
+
+- **Leq** - Ekvivalentní hladina hluku (energetický průměr)
+- **L5** - 5% času je hluk VYŠŠÍ (špičky)
+- **L10** - 10% času je hluk VYŠŠÍ
+- **L90** - 90% času je hluk VYŠŠÍ (pozadí)
+- **L95** - 95% času je hluk VYŠŠÍ (minimum)
+
+Například L5 = 70 dB znamená, že pouze 5% času hluk přesáhl 70 dB.
+
+## 🎯 Tech Stack
+
+- Next.js 16 + TypeScript
+- Tailwind CSS
+- Recharts (grafy)
+- xlsx (Excel parser)
+- date-fns (datumy)
+
+## 📝 Licence
+
+MIT - Použij jak chceš!
