@@ -18,8 +18,6 @@ export function Statistics({ stats }: StatisticsProps) {
           </span>
         </div>
         <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-          <StatCard label="Minimum" value={`${stats.min.toFixed(1)} dB`} color="green" />
-          <StatCard label="Maximum" value={`${stats.max.toFixed(1)} dB`} color="red" />
           <StatCard label="L_eq (Průměr)" value={`${stats.avg.toFixed(1)} dB`} color="blue" />
           <StatCard label="Medián" value={`${stats.median.toFixed(1)} dB`} color="gray" />
           <StatCard label="L_10 (10. percentil)" value={`${stats.p10.toFixed(1)} dB`} color="gray" />
@@ -71,9 +69,6 @@ export function Statistics({ stats }: StatisticsProps) {
                   L<sub>eq</sub>
                 </th>
                 <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Min
-                </th>
-                <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   L<sub>5</sub>
                 </th>
                 <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -84,9 +79,6 @@ export function Statistics({ stats }: StatisticsProps) {
                 </th>
                 <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   L<sub>95</sub>
-                </th>
-                <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Max
                 </th>
                 <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   n
@@ -102,9 +94,6 @@ export function Statistics({ stats }: StatisticsProps) {
                   <td className="px-3 py-3 whitespace-nowrap text-gray-700 font-semibold">
                     {hourly.avg.toFixed(1)}
                   </td>
-                  <td className="px-3 py-3 whitespace-nowrap text-green-600">
-                    {hourly.min.toFixed(1)}
-                  </td>
                   <td className="px-3 py-3 whitespace-nowrap text-gray-600">
                     {hourly.p5.toFixed(1)}
                   </td>
@@ -116,9 +105,6 @@ export function Statistics({ stats }: StatisticsProps) {
                   </td>
                   <td className="px-3 py-3 whitespace-nowrap text-gray-600">
                     {hourly.p95.toFixed(1)}
-                  </td>
-                  <td className="px-3 py-3 whitespace-nowrap text-red-600">
-                    {hourly.max.toFixed(1)}
                   </td>
                   <td className="px-3 py-3 whitespace-nowrap text-gray-500">
                     {hourly.count}
