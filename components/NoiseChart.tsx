@@ -26,6 +26,7 @@ export function NoiseChart({ data, filter, showAverage = true, deletedIndices, o
   const [canvasSize, setCanvasSize] = useState({ width: 800, height: 500 });
   const [wheelZoomEnabled, setWheelZoomEnabled] = useState(true);
   const [deleteMode, setDeleteMode] = useState(false);
+  const [altKeyPressed, setAltKeyPressed] = useState(false);
 
   const filteredData = useMemo(() => {
     // First, filter out deleted points from original data
@@ -116,6 +117,34 @@ export function NoiseChart({ data, filter, showAverage = true, deletedIndices, o
     return () => window.removeEventListener('resize', updateSize);
   }, []);
 
+  // Track Alt/Option key for selection mode cursor
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.altKey || e.key === 'Alt') {
+        setAltKeyPressed(true);
+      }
+    };
+
+    const handleKeyUp = (e: KeyboardEvent) => {
+      if (!e.altKey || e.key === 'Alt') {
+        setAltKeyPressed(false);
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    window.addEventListener('keyup', handleKeyUp);
+
+    // Reset on window blur (when user switches windows)
+    const handleBlur = () => setAltKeyPressed(false);
+    window.addEventListener('blur', handleBlur);
+
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+      window.removeEventListener('keyup', handleKeyUp);
+      window.removeEventListener('blur', handleBlur);
+    };
+  }, []);
+
   // Prevent scroll when wheel zoom is enabled
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -125,7 +154,7 @@ export function NoiseChart({ data, filter, showAverage = true, deletedIndices, o
       if (wheelZoomEnabled) {
         e.preventDefault();
         const delta = e.deltaY > 0 ? 0.9 : 1.1;
-        setZoom(prev => Math.max(1, Math.min(20, prev * delta)));
+        setZoom(prev => Math.max(1, Math.min(100, prev * delta))); // Increased max zoom to 100x
       }
     };
 
@@ -569,7 +598,7 @@ export function NoiseChart({ data, filter, showAverage = true, deletedIndices, o
           // We want selectedRange points to fill the whole width
           // zoom = totalPoints / visiblePoints
           const newZoom = filteredData.length / selectedRange;
-          const clampedZoom = Math.min(20, Math.max(1, newZoom));
+          const clampedZoom = Math.min(100, Math.max(1, newZoom));
 
           console.log('Zoom calculation:', {
             totalPoints: filteredData.length,
@@ -596,7 +625,7 @@ export function NoiseChart({ data, filter, showAverage = true, deletedIndices, o
   };
 
 
-  const zoomIn = () => setZoom(prev => Math.min(20, prev * 1.3));
+  const zoomIn = () => setZoom(prev => Math.min(100, prev * 1.3));
   const zoomOut = () => setZoom(prev => Math.max(1, prev / 1.3));
   const resetZoom = () => { setZoom(1); setPan(0); };
   const resetDeletedData = () => onDeletedIndicesChange(new Set());
@@ -705,6 +734,7 @@ export function NoiseChart({ data, filter, showAverage = true, deletedIndices, o
             isDragging && dragMode === 'select' ? 'cursor-crosshair' :
             isDragging && dragMode === 'delete' ? 'cursor-not-allowed' :
             deleteMode ? 'cursor-not-allowed' :
+            altKeyPressed ? 'cursor-crosshair' :
             'cursor-grab'
           }
           style={{ touchAction: 'none' }}
