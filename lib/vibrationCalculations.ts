@@ -59,10 +59,14 @@ export function calculateTrainRMS(points: VibrationDataPoint[]): {
 
   // Calculate RMS for each frequency and axis
   const rmsValues: number[] = [];
+  const numPoints = points.length;
 
   console.log('--- KROK 2: Výpočet RMS pro osu Z (před korekcí) ---');
+  console.log(`Počet bodů pro průměrování: ${numPoints}`);
   for (let i = 0; i < 60; i++) {
-    const rms_lin = Math.sqrt(sumsSquared[i]);
+    // RMS = Root Mean Square = √(suma² / n)
+    const meanSquared = sumsSquared[i] / numPoints;
+    const rms_lin = Math.sqrt(meanSquared);
     const rms_dB = 10 * Math.log10(rms_lin);
     rmsValues.push(rms_dB);
 
@@ -70,7 +74,7 @@ export function calculateTrainRMS(points: VibrationDataPoint[]): {
     if (i >= 40 && i < 60) {
       const freqIndex = i - 40;
       const freq = [1, 1.25, 1.6, 2, 2.5, 3.15, 4, 5, 6.3, 8, 10, 12.5, 16, 20, 25, 31.5, 40, 50, 63, 80][freqIndex];
-      console.log(`f=${freq} Hz: suma²=${sumsSquared[i].toFixed(2)} → √=${rms_lin.toFixed(4)} → RMS=${rms_dB.toFixed(2)} dB`);
+      console.log(`f=${freq} Hz: suma²=${sumsSquared[i].toFixed(2)} → suma²/${numPoints}=${meanSquared.toFixed(4)} → √=${rms_lin.toFixed(4)} → RMS=${rms_dB.toFixed(2)} dB`);
     }
   }
   console.log('');
