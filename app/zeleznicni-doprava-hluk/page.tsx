@@ -27,6 +27,20 @@ export default function ZeleznicniDopravaHluk() {
       const saved = localStorage.getItem(STORAGE_KEY);
       if (saved) {
         const parsed = JSON.parse(saved);
+
+        // Restore noiseData if available
+        if (parsed.noiseData) {
+          const restoredData = {
+            ...parsed.noiseData,
+            date: new Date(parsed.noiseData.date),
+            points: parsed.noiseData.points.map((p: any) => ({
+              ...p,
+              datetime: new Date(p.datetime),
+            })),
+          };
+          setNoiseData(restoredData);
+        }
+
         if (parsed.trains) {
           // Restore trains with Date objects
           const restoredTrains = parsed.trains.map((t: any) => ({
@@ -42,6 +56,12 @@ export default function ZeleznicniDopravaHluk() {
         if (parsed.activeTab) {
           setActiveTab(parsed.activeTab);
         }
+        if (parsed.timeFilter) {
+          setTimeFilter(parsed.timeFilter);
+        }
+        if (parsed.deletedIndices) {
+          setDeletedIndices(new Set(parsed.deletedIndices));
+        }
       }
     } catch (error) {
       console.error('Error loading saved state:', error);
@@ -50,12 +70,15 @@ export default function ZeleznicniDopravaHluk() {
 
   // Save to localStorage whenever state changes
   useEffect(() => {
-    if (trains.length > 0 || userInputs.size > 0) {
+    if (noiseData || trains.length > 0 || userInputs.size > 0) {
       try {
         const toSave = {
+          noiseData,
           trains,
           userInputs: Object.fromEntries(userInputs),
           activeTab,
+          timeFilter,
+          deletedIndices: Array.from(deletedIndices),
           timestamp: new Date().toISOString(),
         };
         localStorage.setItem(STORAGE_KEY, JSON.stringify(toSave));
@@ -63,7 +86,7 @@ export default function ZeleznicniDopravaHluk() {
         console.error('Error saving state:', error);
       }
     }
-  }, [trains, userInputs, activeTab]);
+  }, [noiseData, trains, userInputs, activeTab, timeFilter, deletedIndices]);
 
   const handleDataLoaded = (data: NoiseData) => {
     setNoiseData(data);

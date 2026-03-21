@@ -77,6 +77,20 @@ export default function Home() {
       const saved = localStorage.getItem(STORAGE_KEY);
       if (saved) {
         const parsed = JSON.parse(saved);
+
+        // Restore noiseData if available
+        if (parsed.noiseData) {
+          const restoredData = {
+            ...parsed.noiseData,
+            date: new Date(parsed.noiseData.date),
+            points: parsed.noiseData.points.map((p: any) => ({
+              ...p,
+              datetime: new Date(p.datetime),
+            })),
+          };
+          setNoiseData(restoredData);
+        }
+
         if (parsed.deletedIndices) {
           setDeletedIndices(new Set(parsed.deletedIndices));
         }
@@ -94,9 +108,10 @@ export default function Home() {
 
   // Save to localStorage whenever state changes
   useEffect(() => {
-    if (deletedIndices.size > 0 || timeFilter.type !== 'all' || activeTab !== 'chart') {
+    if (noiseData) {
       try {
         const toSave = {
+          noiseData,
           deletedIndices: Array.from(deletedIndices),
           timeFilter,
           activeTab,
@@ -107,7 +122,7 @@ export default function Home() {
         console.error('Error saving state:', error);
       }
     }
-  }, [deletedIndices, timeFilter, activeTab]);
+  }, [noiseData, deletedIndices, timeFilter, activeTab]);
 
   // Recalculate statistics when data is deleted
   const currentStats = useMemo(() => {
