@@ -18,7 +18,7 @@ export default function Home() {
       description: 'Analýza hluku ze železniční dopravy',
       icon: '🚂',
       color: 'from-green-500 to-green-600',
-      available: false,
+      available: true,
     },
     {
       id: 'zeleznicni-doprava-vibrace',

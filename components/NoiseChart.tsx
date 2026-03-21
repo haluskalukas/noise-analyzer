@@ -9,9 +9,10 @@ interface NoiseChartProps {
   showAverage?: boolean;
   deletedIndices: Set<number>;
   onDeletedIndicesChange: (indices: Set<number>) => void;
+  onTrainSelection?: (startIdx: number, endIdx: number, data: NoiseDataPoint[]) => void;
 }
 
-export function NoiseChart({ data, filter, showAverage = true, deletedIndices, onDeletedIndicesChange }: NoiseChartProps) {
+export function NoiseChart({ data, filter, showAverage = true, deletedIndices, onDeletedIndicesChange, onTrainSelection }: NoiseChartProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -553,7 +554,7 @@ export function NoiseChart({ data, filter, showAverage = true, deletedIndices, o
       }
     }
 
-    // If this was a selection, zoom to selected area
+    // If this was a selection, zoom to selected area OR add train
     if (dragMode === 'select' && isDragging) {
       const rect = canvasRef.current.getBoundingClientRect();
       const margin = 60;
@@ -594,22 +595,27 @@ export function NoiseChart({ data, filter, showAverage = true, deletedIndices, o
         });
 
         if (selectedRange > 3) {
-          // Calculate new zoom based on how many points should be visible
-          // We want selectedRange points to fill the whole width
-          // zoom = totalPoints / visiblePoints
-          const newZoom = filteredData.length / selectedRange;
-          const clampedZoom = Math.min(100, Math.max(1, newZoom));
+          // If onTrainSelection callback exists (railway mode), add train instead of zooming
+          if (onTrainSelection) {
+            onTrainSelection(selectedStartIdx, selectedEndIdx, filteredData);
+          } else {
+            // Calculate new zoom based on how many points should be visible
+            // We want selectedRange points to fill the whole width
+            // zoom = totalPoints / visiblePoints
+            const newZoom = filteredData.length / selectedRange;
+            const clampedZoom = Math.min(100, Math.max(1, newZoom));
 
-          console.log('Zoom calculation:', {
-            totalPoints: filteredData.length,
-            selectedRange,
-            newZoom,
-            clampedZoom,
-            newPan: selectedStartIdx
-          });
+            console.log('Zoom calculation:', {
+              totalPoints: filteredData.length,
+              selectedRange,
+              newZoom,
+              clampedZoom,
+              newPan: selectedStartIdx
+            });
 
-          setZoom(clampedZoom);
-          setPan(selectedStartIdx);
+            setZoom(clampedZoom);
+            setPan(selectedStartIdx);
+          }
         }
       }
     }
