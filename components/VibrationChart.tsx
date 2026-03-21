@@ -378,11 +378,28 @@ export function VibrationChart({ data, onTrainSelection }: VibrationChartProps) 
       const index1 = Math.round((relativeX1 / chartWidth) * (visibleData.length - 1));
       const index2 = Math.round((relativeX2 / chartWidth) * (visibleData.length - 1));
 
+      // Calculate indices in the original data array
+      // Since chartData now equals data (no downsampling), indices should match
       const selectionStart = startIdx + Math.min(index1, index2);
       const selectionEnd = startIdx + Math.max(index1, index2);
 
       if (selectionEnd > selectionStart) {
-        onTrainSelection(selectionStart, selectionEnd, data);
+        // Ensure indices are within bounds
+        const validStart = Math.max(0, Math.min(selectionStart, data.length - 1));
+        const validEnd = Math.max(0, Math.min(selectionEnd, data.length - 1));
+
+        console.log('Train selection:', {
+          startIdx,
+          endIdx,
+          index1,
+          index2,
+          selectionStart: validStart,
+          selectionEnd: validEnd,
+          startTime: data[validStart]?.datetime,
+          endTime: data[validEnd]?.datetime
+        });
+
+        onTrainSelection(validStart, validEnd, data);
       }
     }
 
