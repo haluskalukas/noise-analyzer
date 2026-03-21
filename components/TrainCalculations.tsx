@@ -11,10 +11,11 @@ interface TrainCalculationsProps {
 }
 
 export function TrainCalculations({ trains }: TrainCalculationsProps) {
-  const [categories, setCategories] = useState<TrainCategory[]>([]);
+  // Store user inputs separately to avoid circular dependency
+  const [userInputs, setUserInputs] = useState<Map<string, { pocetVlakuDen: number; pocetVlakuNoc: number }>>(new Map());
 
-  // Group trains by category and calculate LAE averages
-  const calculatedCategories = useMemo(() => {
+  // Group trains by category and calculate LAE averages (pure calculation, no dependency on state)
+  const categories = useMemo(() => {
     const categoryMap = new Map<string, Train[]>();
 
     // Group trains by druhVlaku
@@ -35,11 +36,10 @@ export function TrainCalculations({ trains }: TrainCalculationsProps) {
       );
       const laeAverage = 10 * Math.log10(sumOfPowers / categoryTrains.length);
 
-      // Find existing category to preserve user input
-      const existing = categories.find(c => c.kategorie === kategorie);
-
-      const pocetVlakuDen = existing?.pocetVlakuDen ?? 0;
-      const pocetVlakuNoc = existing?.pocetVlakuNoc ?? 0;
+      // Get user inputs for this category
+      const inputs = userInputs.get(kategorie);
+      const pocetVlakuDen = inputs?.pocetVlakuDen ?? 0;
+      const pocetVlakuNoc = inputs?.pocetVlakuNoc ?? 0;
 
       // Calculate total noise
       const delogaritmovanyPrumer = Math.pow(10, laeAverage / 10);
@@ -62,32 +62,16 @@ export function TrainCalculations({ trains }: TrainCalculationsProps) {
     });
 
     return cats.sort((a, b) => a.kategorie.localeCompare(b.kategorie));
-  }, [trains, categories]);
-
-  // Update categories when calculated categories change
-  useEffect(() => {
-    setCategories(calculatedCategories);
-  }, [calculatedCategories]);
+  }, [trains, userInputs]);
 
   const handleCountChange = (kategorie: string, field: 'pocetVlakuDen' | 'pocetVlakuNoc', value: string) => {
     const numValue = parseInt(value) || 0;
-    setCategories(prev => prev.map(cat => {
-      if (cat.kategorie === kategorie) {
-        const updated = { ...cat, [field]: numValue };
-
-        // Recalculate total noise
-        const delogaritmovanyPrumer = Math.pow(10, cat.laeAverage / 10);
-        updated.celkovyHlukDen = updated.pocetVlakuDen > 0
-          ? 10 * Math.log10((delogaritmovanyPrumer * updated.pocetVlakuDen) / 57600)
-          : 0;
-        updated.celkovyHlukNoc = updated.pocetVlakuNoc > 0
-          ? 10 * Math.log10((delogaritmovanyPrumer * updated.pocetVlakuNoc) / 28800)
-          : 0;
-
-        return updated;
-      }
-      return cat;
-    }));
+    setUserInputs(prev => {
+      const newMap = new Map(prev);
+      const existing = newMap.get(kategorie) || { pocetVlakuDen: 0, pocetVlakuNoc: 0 };
+      newMap.set(kategorie, { ...existing, [field]: numValue });
+      return newMap;
+    });
   };
 
   const exportToExcel = () => {
