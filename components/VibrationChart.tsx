@@ -38,14 +38,24 @@ export function VibrationChart({ data, onTrainSelection }: VibrationChartProps) 
       processedData = data.filter((_, idx) => idx % step === 0);
     }
 
-    return processedData.map((point, index) => {
+    const result = processedData.map((point, index) => {
       // For Z axis: show only 50 Hz frequency (index 57)
       // Frequency 50 Hz is at position 17 in the list (0-indexed)
       // For Z axis (indices 40-59), 50 Hz is at index 40 + 17 = 57
       const freq50HzIndex = 57;
 
       const value = point.frequencies[freq50HzIndex];
-      const validValue = (!isNaN(value) && isFinite(value)) ? value : 0;
+      const validValue = (!isNaN(value) && isFinite(value) && value !== 0) ? value : 0;
+
+      // Debug first point
+      if (index === 0) {
+        console.log('VibrationChart - First point:', {
+          totalFrequencies: point.frequencies.length,
+          freq50HzValue: value,
+          allFrequencies: point.frequencies,
+          validValue,
+        });
+      }
 
       return {
         index: index * step,
@@ -54,6 +64,19 @@ export function VibrationChart({ data, onTrainSelection }: VibrationChartProps) 
         datetime: point.datetime,
       };
     });
+
+    // Debug chart data
+    if (result.length > 0) {
+      const nonZeroValues = result.filter(d => d.value !== 0);
+      console.log('VibrationChart data:', {
+        totalPoints: result.length,
+        nonZeroPoints: nonZeroValues.length,
+        firstValues: result.slice(0, 5).map(d => d.value),
+        sampleTimes: result.slice(0, 3).map(d => d.time),
+      });
+    }
+
+    return result;
   }, [data]);
 
   const handleMouseDown = (e: any) => {
@@ -114,11 +137,19 @@ export function VibrationChart({ data, onTrainSelection }: VibrationChartProps) 
         >
           <CartesianGrid strokeDasharray="3 3" />
           <XAxis
-            dataKey="time"
+            dataKey="index"
+            type="number"
+            domain={[0, 'dataMax']}
+            tickFormatter={(value) => {
+              const point = chartData.find(d => d.index === value);
+              return point ? point.time : '';
+            }}
             label={{ value: 'Čas', position: 'insideBottom', offset: -5 }}
+            interval="preserveStartEnd"
+            minTickGap={50}
           />
           <YAxis
-            domain={[minValue, maxValue]}
+            domain={['auto', 'auto']}
             label={{ value: 'Vibrace - osa Z, 50 Hz (dB)', angle: -90, position: 'insideLeft' }}
           />
           <Tooltip
