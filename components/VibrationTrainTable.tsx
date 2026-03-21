@@ -1,8 +1,10 @@
 'use client';
 
+import { useState } from 'react';
 import { VibrationTrain, LIMIT_DB } from '@/types/vibration';
 import { format } from 'date-fns';
 import * as XLSX from 'xlsx';
+import { VibrationTrainDetail } from './VibrationTrainDetail';
 
 interface VibrationTrainTableProps {
   trains: VibrationTrain[];
@@ -15,6 +17,7 @@ export function VibrationTrainTable({
   onUpdateTrain,
   onDeleteTrain,
 }: VibrationTrainTableProps) {
+  const [selectedTrain, setSelectedTrain] = useState<VibrationTrain | null>(null);
   const handleExport = () => {
     if (trains.length === 0) {
       alert('Žádná data k exportu');
@@ -186,19 +189,36 @@ export function VibrationTrainTable({
                   </span>
                 </td>
                 <td className="px-3 py-3 whitespace-nowrap text-center">
-                  <button
-                    onClick={() => onDeleteTrain(train.id)}
-                    className="text-red-600 hover:text-red-800 transition-colors"
-                    title="Smazat vlak"
-                  >
-                    🗑️
-                  </button>
+                  <div className="flex items-center justify-center gap-2">
+                    <button
+                      onClick={() => setSelectedTrain(train)}
+                      className="px-3 py-1 bg-blue-600 hover:bg-blue-700 text-white text-xs rounded transition-colors"
+                      title="Zobrazit detail"
+                    >
+                      📊 Detail
+                    </button>
+                    <button
+                      onClick={() => onDeleteTrain(train.id)}
+                      className="text-red-600 hover:text-red-800 transition-colors"
+                      title="Smazat vlak"
+                    >
+                      🗑️
+                    </button>
+                  </div>
                 </td>
               </tr>
             ))}
           </tbody>
         </table>
       </div>
+
+      {/* Train Detail Modal */}
+      {selectedTrain && (
+        <VibrationTrainDetail
+          train={selectedTrain}
+          onClose={() => setSelectedTrain(null)}
+        />
+      )}
 
       <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
         <p className="text-sm text-amber-800">
