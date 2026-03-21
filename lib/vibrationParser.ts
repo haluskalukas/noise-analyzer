@@ -44,49 +44,35 @@ export function parseVibrationExcel(file: File): Promise<VibrationData> {
 
           if (!row || row.length < 62) continue;
 
-          // Parse time
-          const excelSerialDate = typeof row[0] === 'number' ? row[0] : 0;
-          const excelSerialTime = typeof row[1] === 'number' ? row[1] : 0;
+          // Parse datetime - XLSX already converted to Date objects with cellDates: true
+          let datetime: Date;
 
-          // Debug first row
-          if (i === 1) {
-            console.log('First data row:', {
-              row0: row[0],
-              row0Type: typeof row[0],
-              row1: row[1],
-              row1Type: typeof row[1],
-              excelSerialDate,
-              excelSerialTime
-            });
+          if (row[0] instanceof Date && row[1] instanceof Date) {
+            // Combine date from row[0] and time from row[1]
+            const dateObj = row[0];
+            const timeObj = row[1];
+
+            datetime = new Date(
+              dateObj.getFullYear(),
+              dateObj.getMonth(),
+              dateObj.getDate(),
+              timeObj.getHours(),
+              timeObj.getMinutes(),
+              timeObj.getSeconds(),
+              timeObj.getMilliseconds()
+            );
+          } else {
+            // Fallback if not Date objects
+            datetime = new Date();
           }
-
-          const dateInfo = XLSX.SSF.parse_date_code(excelSerialDate);
-          const timeInDays = excelSerialTime;
-          const timeInSeconds = timeInDays * 24 * 60 * 60;
-
-          const hours = Math.floor(timeInSeconds / 3600);
-          const minutes = Math.floor((timeInSeconds % 3600) / 60);
-          const seconds = Math.floor(timeInSeconds % 60);
-          const milliseconds = Math.floor((timeInSeconds % 1) * 1000);
-
-          const datetime = new Date(
-            dateInfo.y,
-            dateInfo.m - 1,
-            dateInfo.d,
-            hours,
-            minutes,
-            seconds,
-            milliseconds
-          );
 
           // Debug first datetime
           if (i === 1) {
             console.log('First datetime parsed:', {
+              row0: row[0],
+              row1: row[1],
               datetime,
-              dateInfo,
-              hours,
-              minutes,
-              seconds
+              formatted: `${datetime.getHours()}:${datetime.getMinutes()}:${datetime.getSeconds()}`
             });
           }
 
