@@ -1,8 +1,19 @@
 'use client';
 
 import Link from 'next/link';
+import { useState, useEffect } from 'react';
 
 export default function Home() {
+  const [savedStates, setSavedStates] = useState<Record<string, boolean>>({});
+
+  // Check for saved states in localStorage
+  useEffect(() => {
+    const states: Record<string, boolean> = {};
+    states['automobilova-doprava'] = !!localStorage.getItem('automobilova-doprava-state');
+    states['zeleznicni-doprava-hluk'] = !!localStorage.getItem('zeleznicni-doprava-hluk-state');
+    setSavedStates(states);
+  }, []);
+
   const projects = [
     {
       id: 'automobilova-doprava',
@@ -82,7 +93,7 @@ export default function Home() {
         {/* Projects Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {projects.map((project) => (
-            <ProjectCard key={project.id} project={project} />
+            <ProjectCard key={project.id} project={project} hasSavedState={savedStates[project.id]} />
           ))}
         </div>
       </main>
@@ -95,7 +106,7 @@ export default function Home() {
   );
 }
 
-function ProjectCard({ project }: { project: any }) {
+function ProjectCard({ project, hasSavedState }: { project: any; hasSavedState?: boolean }) {
   const content = (
     <div
       className={`relative h-full p-6 rounded-xl shadow-lg transition-all duration-300 ${
@@ -124,6 +135,15 @@ function ProjectCard({ project }: { project: any }) {
       >
         {project.description}
       </p>
+
+      {/* Saved State Badge */}
+      {project.available && hasSavedState && (
+        <div className="absolute top-4 right-4">
+          <span className="bg-yellow-400 text-yellow-900 text-xs font-semibold px-3 py-1 rounded-full flex items-center gap-1">
+            💾 Uloženo
+          </span>
+        </div>
+      )}
 
       {/* Status Badge */}
       {!project.available && (

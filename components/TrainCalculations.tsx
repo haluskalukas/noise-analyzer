@@ -3,16 +3,16 @@
 import { Train } from '@/types/train';
 import { TrainCategory } from '@/types/train-calculation';
 import { formatNumber } from '@/lib/format';
-import { useMemo, useState, useEffect } from 'react';
+import { useMemo } from 'react';
 import * as XLSX from 'xlsx';
 
 interface TrainCalculationsProps {
   trains: Train[];
+  userInputs: Map<string, { pocetVlakuDen: number; pocetVlakuNoc: number }>;
+  onUserInputsChange: (inputs: Map<string, { pocetVlakuDen: number; pocetVlakuNoc: number }>) => void;
 }
 
-export function TrainCalculations({ trains }: TrainCalculationsProps) {
-  // Store user inputs separately to avoid circular dependency
-  const [userInputs, setUserInputs] = useState<Map<string, { pocetVlakuDen: number; pocetVlakuNoc: number }>>(new Map());
+export function TrainCalculations({ trains, userInputs, onUserInputsChange }: TrainCalculationsProps) {
 
   // Group trains by category and calculate LAE averages (pure calculation, no dependency on state)
   const categories = useMemo(() => {
@@ -92,12 +92,10 @@ export function TrainCalculations({ trains }: TrainCalculationsProps) {
 
   const handleCountChange = (kategorie: string, field: 'pocetVlakuDen' | 'pocetVlakuNoc', value: string) => {
     const numValue = parseInt(value) || 0;
-    setUserInputs(prev => {
-      const newMap = new Map(prev);
-      const existing = newMap.get(kategorie) || { pocetVlakuDen: 0, pocetVlakuNoc: 0 };
-      newMap.set(kategorie, { ...existing, [field]: numValue });
-      return newMap;
-    });
+    const newMap = new Map(userInputs);
+    const existing = newMap.get(kategorie) || { pocetVlakuDen: 0, pocetVlakuNoc: 0 };
+    newMap.set(kategorie, { ...existing, [field]: numValue });
+    onUserInputsChange(newMap);
   };
 
   const exportToExcel = () => {

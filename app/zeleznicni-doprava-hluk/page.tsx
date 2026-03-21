@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { FileUpload } from '@/components/FileUpload';
 import { NoiseChart } from '@/components/NoiseChart';
@@ -11,12 +11,59 @@ import { Train } from '@/types/train';
 import { format } from 'date-fns';
 import { cs } from 'date-fns/locale';
 
+const STORAGE_KEY = 'zeleznicni-doprava-hluk-state';
+
 export default function ZeleznicniDopravaHluk() {
   const [noiseData, setNoiseData] = useState<NoiseData | null>(null);
   const [timeFilter, setTimeFilter] = useState<TimeFilter>({ type: 'all' });
   const [trains, setTrains] = useState<Train[]>([]);
   const [deletedIndices, setDeletedIndices] = useState<Set<number>>(new Set());
   const [activeTab, setActiveTab] = useState<'trains' | 'calculations'>('trains');
+  const [userInputs, setUserInputs] = useState<Map<string, { pocetVlakuDen: number; pocetVlakuNoc: number }>>(new Map());
+
+  // Load from localStorage on mount
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEY);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (parsed.trains) {
+          // Restore trains with Date objects
+          const restoredTrains = parsed.trains.map((t: any) => ({
+            ...t,
+            startTime: new Date(t.startTime),
+            endTime: new Date(t.endTime),
+          }));
+          setTrains(restoredTrains);
+        }
+        if (parsed.userInputs) {
+          setUserInputs(new Map(Object.entries(parsed.userInputs)));
+        }
+        if (parsed.activeTab) {
+          setActiveTab(parsed.activeTab);
+        }
+      }
+    } catch (error) {
+      console.error('Error loading saved state:', error);
+    }
+  }, []);
+
+  // Save to localStorage whenever state changes
+  useEffect(() => {
+    if (trains.length > 0 || userInputs.size > 0) {
+      try {
+        const toSave = {
+          trains,
+          userInputs: Object.fromEntries(userInputs),
+          activeTab,
+          timestamp: new Date().toISOString(),
+        };
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(toSave));
+      } catch (error) {
+        console.error('Error saving state:', error);
+      }
+    }
+  }, [trains, userInputs, activeTab]);
 
   const handleDataLoaded = (data: NoiseData) => {
     setNoiseData(data);
@@ -31,6 +78,8 @@ export default function ZeleznicniDopravaHluk() {
     setTrains([]);
     setDeletedIndices(new Set());
     setActiveTab('trains');
+    setUserInputs(new Map());
+    localStorage.removeItem(STORAGE_KEY);
   };
 
   const handleAddTrain = (startIdx: number, endIdx: number, points: NoiseDataPoint[]) => {
@@ -217,7 +266,11 @@ export default function ZeleznicniDopravaHluk() {
                   />
                 )}
                 {activeTab === 'calculations' && (
-                  <TrainCalculations trains={trains} />
+                  <TrainCalculations
+                    trains={trains}
+                    userInputs={userInputs}
+                    onUserInputsChange={setUserInputs}
+                  />
                 )}
               </div>
             </div>

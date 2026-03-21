@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import Link from 'next/link';
 import { FileUpload } from '@/components/FileUpload';
 import { NoiseChart } from '@/components/NoiseChart';
@@ -8,6 +8,8 @@ import { Statistics } from '@/components/Statistics';
 import { NoiseData, TimeFilter, NoiseDataPoint, NoiseStats, HourlyAvg } from '@/types';
 import { format } from 'date-fns';
 import { cs } from 'date-fns/locale';
+
+const STORAGE_KEY = 'automobilova-doprava-state';
 
 // Helper functions for statistics calculation
 function calculateLogAverage(values: number[]): number {
@@ -69,6 +71,44 @@ export default function Home() {
   const [activeTab, setActiveTab] = useState<'chart' | 'stats'>('chart');
   const [deletedIndices, setDeletedIndices] = useState<Set<number>>(new Set());
 
+  // Load from localStorage on mount
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEY);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (parsed.deletedIndices) {
+          setDeletedIndices(new Set(parsed.deletedIndices));
+        }
+        if (parsed.timeFilter) {
+          setTimeFilter(parsed.timeFilter);
+        }
+        if (parsed.activeTab) {
+          setActiveTab(parsed.activeTab);
+        }
+      }
+    } catch (error) {
+      console.error('Error loading saved state:', error);
+    }
+  }, []);
+
+  // Save to localStorage whenever state changes
+  useEffect(() => {
+    if (deletedIndices.size > 0 || timeFilter.type !== 'all' || activeTab !== 'chart') {
+      try {
+        const toSave = {
+          deletedIndices: Array.from(deletedIndices),
+          timeFilter,
+          activeTab,
+          timestamp: new Date().toISOString(),
+        };
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(toSave));
+      } catch (error) {
+        console.error('Error saving state:', error);
+      }
+    }
+  }, [deletedIndices, timeFilter, activeTab]);
+
   // Recalculate statistics when data is deleted
   const currentStats = useMemo(() => {
     if (!noiseData) return null;
@@ -103,6 +143,7 @@ export default function Home() {
     setTimeFilter({ type: 'all' });
     setActiveTab('chart');
     setDeletedIndices(new Set());
+    localStorage.removeItem(STORAGE_KEY);
   };
 
   return (
