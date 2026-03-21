@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { FileUpload } from '@/components/FileUpload';
 import { NoiseChart } from '@/components/NoiseChart';
 import { TrainTable } from '@/components/TrainTable';
+import { TrainCalculations } from '@/components/TrainCalculations';
 import { NoiseData, TimeFilter, NoiseDataPoint } from '@/types';
 import { Train } from '@/types/train';
 import { format } from 'date-fns';
@@ -15,6 +16,7 @@ export default function ZeleznicniDopravaHluk() {
   const [timeFilter, setTimeFilter] = useState<TimeFilter>({ type: 'all' });
   const [trains, setTrains] = useState<Train[]>([]);
   const [deletedIndices, setDeletedIndices] = useState<Set<number>>(new Set());
+  const [activeTab, setActiveTab] = useState<'trains' | 'calculations'>('trains');
 
   const handleDataLoaded = (data: NoiseData) => {
     setNoiseData(data);
@@ -28,6 +30,7 @@ export default function ZeleznicniDopravaHluk() {
     setTimeFilter({ type: 'all' });
     setTrains([]);
     setDeletedIndices(new Set());
+    setActiveTab('trains');
   };
 
   const handleAddTrain = (startIdx: number, endIdx: number, points: NoiseDataPoint[]) => {
@@ -188,13 +191,35 @@ export default function ZeleznicniDopravaHluk() {
               />
             </div>
 
-            {/* Train Table */}
-            <div className="bg-white rounded-lg shadow-sm p-6">
-              <TrainTable
-                trains={trains}
-                onUpdateTrain={handleUpdateTrain}
-                onDeleteTrain={handleDeleteTrain}
-              />
+            {/* Tabs */}
+            <div className="bg-white rounded-lg shadow-sm">
+              <div className="border-b border-gray-200">
+                <nav className="flex -mb-px">
+                  <TabButton
+                    active={activeTab === 'trains'}
+                    onClick={() => setActiveTab('trains')}
+                    label="🚂 Seznam vlaků"
+                  />
+                  <TabButton
+                    active={activeTab === 'calculations'}
+                    onClick={() => setActiveTab('calculations')}
+                    label="📊 Dopočet"
+                  />
+                </nav>
+              </div>
+
+              <div className="p-6">
+                {activeTab === 'trains' && (
+                  <TrainTable
+                    trains={trains}
+                    onUpdateTrain={handleUpdateTrain}
+                    onDeleteTrain={handleDeleteTrain}
+                  />
+                )}
+                {activeTab === 'calculations' && (
+                  <TrainCalculations trains={trains} />
+                )}
+              </div>
             </div>
           </div>
         )}
@@ -229,6 +254,29 @@ function FilterButton({
       }`}
     >
       <span className="mr-2">{icon}</span>
+      {label}
+    </button>
+  );
+}
+
+function TabButton({
+  active,
+  onClick,
+  label,
+}: {
+  active: boolean;
+  onClick: () => void;
+  label: string;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      className={`px-6 py-3 font-medium text-sm border-b-2 transition-colors ${
+        active
+          ? 'border-blue-600 text-blue-600'
+          : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+      }`}
+    >
       {label}
     </button>
   );
