@@ -64,6 +64,32 @@ export function TrainCalculations({ trains }: TrainCalculationsProps) {
     return cats.sort((a, b) => a.kategorie.localeCompare(b.kategorie));
   }, [trains, userInputs]);
 
+  // Calculate total noise from all categories combined
+  const totalNoise = useMemo(() => {
+    let sumaOdlogaritmovanychDen = 0;
+    let sumaOdlogaritmovanychNoc = 0;
+
+    categories.forEach(cat => {
+      if (cat.pocetVlakuDen > 0) {
+        const delogaritmovanyPrumer = Math.pow(10, cat.laeAverage / 10);
+        sumaOdlogaritmovanychDen += delogaritmovanyPrumer * cat.pocetVlakuDen;
+      }
+      if (cat.pocetVlakuNoc > 0) {
+        const delogaritmovanyPrumer = Math.pow(10, cat.laeAverage / 10);
+        sumaOdlogaritmovanychNoc += delogaritmovanyPrumer * cat.pocetVlakuNoc;
+      }
+    });
+
+    const celkovyHlukDen = sumaOdlogaritmovanychDen > 0
+      ? 10 * Math.log10(sumaOdlogaritmovanychDen / 57600)
+      : 0;
+    const celkovyHlukNoc = sumaOdlogaritmovanychNoc > 0
+      ? 10 * Math.log10(sumaOdlogaritmovanychNoc / 28800)
+      : 0;
+
+    return { celkovyHlukDen, celkovyHlukNoc };
+  }, [categories]);
+
   const handleCountChange = (kategorie: string, field: 'pocetVlakuDen' | 'pocetVlakuNoc', value: string) => {
     const numValue = parseInt(value) || 0;
     setUserInputs(prev => {
@@ -93,6 +119,17 @@ export function TrainCalculations({ trains }: TrainCalculationsProps) {
         cat.pocetVlakuNoc > 0 ? formatNumber(cat.celkovyHlukNoc) : '-',
       ]);
     });
+
+    // Add total noise row
+    data.push(['', '', '', '', '', '']);
+    data.push([
+      'CELKOVÝ HLUK ZE VŠECH KATEGORIÍ',
+      '',
+      '',
+      totalNoise.celkovyHlukDen > 0 ? formatNumber(totalNoise.celkovyHlukDen) : '-',
+      '',
+      totalNoise.celkovyHlukNoc > 0 ? formatNumber(totalNoise.celkovyHlukNoc) : '-',
+    ]);
 
     const ws = XLSX.utils.aoa_to_sheet(data);
     XLSX.utils.book_append_sheet(wb, ws, 'Dopočet');
@@ -203,6 +240,31 @@ export function TrainCalculations({ trains }: TrainCalculationsProps) {
             ))}
           </tbody>
         </table>
+      </div>
+
+      {/* Total Noise from All Categories */}
+      <div className="bg-gradient-to-r from-purple-50 to-pink-50 border-2 border-purple-300 rounded-lg p-6">
+        <h4 className="text-lg font-bold text-purple-900 mb-4">
+          Celkový hluk ze všech kategorií vlaků
+        </h4>
+        <div className="grid grid-cols-2 gap-6">
+          <div className="bg-white rounded-lg p-4 border border-orange-200">
+            <div className="text-sm text-gray-600 mb-1">Denní doba (6:00-22:00)</div>
+            <div className="text-3xl font-bold text-orange-700">
+              {totalNoise.celkovyHlukDen > 0 ? formatNumber(totalNoise.celkovyHlukDen) : '-'} dB
+            </div>
+          </div>
+          <div className="bg-white rounded-lg p-4 border border-indigo-200">
+            <div className="text-sm text-gray-600 mb-1">Noční doba (22:00-6:00)</div>
+            <div className="text-3xl font-bold text-indigo-700">
+              {totalNoise.celkovyHlukNoc > 0 ? formatNumber(totalNoise.celkovyHlukNoc) : '-'} dB
+            </div>
+          </div>
+        </div>
+        <div className="mt-4 text-xs text-purple-700 bg-purple-100 rounded p-3">
+          <strong>Výpočet:</strong> Suma odlogaritmovaných L<sub>AE</sub> × počet vlaků ze všech kategorií,
+          poté přepočet na dB: 10 × log₁₀(suma / (57600 pro den / 28800 pro noc))
+        </div>
       </div>
 
       {/* Formula explanation */}
