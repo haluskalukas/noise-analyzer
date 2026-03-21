@@ -257,40 +257,41 @@ export function VibrationChart({ data, onTrainSelection }: VibrationChartProps) 
     ctx.fillText('Vibrace - osa Z, 50 Hz (dB)', 0, 0);
     ctx.restore();
 
-    // Draw hover tooltip
+    // Draw hover tooltip - stejný styl jako u hluku
     if (hoveredPoint !== null && hoveredPoint >= 0 && hoveredPoint < visibleData.length) {
       const point = visibleData[hoveredPoint];
       const x = xScale(hoveredPoint);
       const y = yScale(point.value);
 
-      // Draw point
-      ctx.fillStyle = '#3b82f6';
+      const tooltipText = `${point.value.toFixed(1)} dB`;
+      const time = format(point.datetime, 'HH:mm:ss');
+
+      ctx.font = '12px sans-serif';
+      const textWidth = Math.max(ctx.measureText(tooltipText).width, ctx.measureText(time).width);
+
+      const tooltipX = x + 15;
+      const tooltipY = y - 35;
+      const tooltipPadding = 8;
+
+      // Tooltip background
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.95)';
+      ctx.strokeStyle = '#3b82f6';
+      ctx.lineWidth = 2;
       ctx.beginPath();
-      ctx.arc(x, y, 4, 0, 2 * Math.PI);
+      ctx.roundRect(tooltipX, tooltipY, textWidth + tooltipPadding * 2, 40, 6);
       ctx.fill();
+      ctx.stroke();
 
-      // Draw tooltip with highlighted time and value
-      const timeText = format(point.datetime, 'HH:mm:ss');
-      const valueText = `${point.value.toFixed(1)} dB`;
-      ctx.font = 'bold 13px sans-serif';
-      const timeWidth = ctx.measureText(timeText).width;
-      const valueWidth = ctx.measureText(valueText).width;
-      const totalWidth = timeWidth + valueWidth + 10; // 10px spacing between time and value
+      // Tooltip text - hodnota dB
+      ctx.fillStyle = '#1f2937';
+      ctx.font = 'bold 12px sans-serif';
+      ctx.textAlign = 'left';
+      ctx.fillText(tooltipText, tooltipX + tooltipPadding, tooltipY + 18);
 
-      const tooltipX = Math.min(x, width - totalWidth - 20);
-      const tooltipY = y - 30;
-
-      // Background
-      ctx.fillStyle = 'rgba(0, 0, 0, 0.85)';
-      ctx.fillRect(tooltipX - 8, tooltipY - 18, totalWidth + 16, 28);
-
-      // Time in yellow/green
-      ctx.fillStyle = '#fbbf24';
-      ctx.fillText(timeText, tooltipX, tooltipY);
-
-      // Value in white
-      ctx.fillStyle = '#ffffff';
-      ctx.fillText(valueText, tooltipX + timeWidth + 10, tooltipY);
+      // Čas pod hodnotou
+      ctx.font = '11px sans-serif';
+      ctx.fillStyle = '#6b7280';
+      ctx.fillText(time, tooltipX + tooltipPadding, tooltipY + 33);
     }
 
   }, [chartData, canvasSize, zoom, pan, isDragging, dragMode, dragStartPos, currentMousePos, hoveredPoint]);

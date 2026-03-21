@@ -30,19 +30,10 @@ interface VibrationTrainDetailProps {
 
 export function VibrationTrainDetail({ train, onClose }: VibrationTrainDetailProps) {
   const chartRef = useRef<ChartJS<'bar'>>(null);
-  // Prepare chart data - limit první (vzadu), pak osy
+  // Prepare chart data - pouze osy X, Y, Z
   const chartData = {
     labels: [...FREQUENCY_LIST.map(f => f.toString()), 'Law'],
     datasets: [
-      {
-        label: 'limit',
-        data: [...Array(FREQUENCY_LIST.length).fill(LIMIT_DB), LIMIT_DB],
-        backgroundColor: 'rgba(200, 200, 200, 0.3)',
-        borderColor: 'rgba(150, 150, 150, 0.5)',
-        borderWidth: 1,
-        barPercentage: 1.0,
-        categoryPercentage: 1.0,
-      },
       {
         label: 'osa X',
         data: [...train.rmsX, train.lawX],
