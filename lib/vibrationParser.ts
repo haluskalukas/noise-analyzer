@@ -66,16 +66,6 @@ export function parseVibrationExcel(file: File): Promise<VibrationData> {
             datetime = new Date();
           }
 
-          // Debug first datetime
-          if (i === 1) {
-            console.log('First datetime parsed:', {
-              row0: row[0],
-              row1: row[1],
-              datetime,
-              formatted: `${datetime.getHours()}:${datetime.getMinutes()}:${datetime.getSeconds()}`
-            });
-          }
-
           // Parse only the 50 Hz frequency from Z axis for display
           // Z axis: columns 42-61 (indices 41-60 in row, or 2+40 to 2+59)
           // 50 Hz is at position 17 in the frequency list

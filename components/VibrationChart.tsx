@@ -29,20 +29,8 @@ export function VibrationChart({ data, onTrainSelection }: VibrationChartProps) 
   const chartData = useMemo(() => {
     if (!data || data.length === 0) return [];
 
-    // Downsample to max 5000 points to prevent stack overflow
-    const MAX_POINTS = 5000;
-    let step = 1;
-    let sampledData = data;
-
-    if (data.length > MAX_POINTS) {
-      step = Math.ceil(data.length / MAX_POINTS);
-      sampledData = [];
-      for (let i = 0; i < data.length; i += step) {
-        sampledData.push(data[i]);
-      }
-    }
-
-    return sampledData.map((point, index) => {
+    // Use all data - no downsampling
+    return data.map((point, index) => {
       // For Z axis: 50 Hz frequency (index 57)
       // Frequency 50 Hz is at position 17 in the list (0-indexed)
       // For Z axis (indices 40-59), 50 Hz is at index 40 + 17 = 57
@@ -51,17 +39,6 @@ export function VibrationChart({ data, onTrainSelection }: VibrationChartProps) 
 
       // Ensure datetime is a Date object
       const datetime = point.datetime instanceof Date ? point.datetime : new Date(point.datetime);
-
-      if (index === 0) {
-        console.log('First chartData point:', {
-          datetime,
-          dateType: typeof datetime,
-          isDate: datetime instanceof Date,
-          formatted: format(datetime, 'HH:mm:ss'),
-          value,
-          allFreqs: point.frequencies.length
-        });
-      }
 
       return {
         datetime,
