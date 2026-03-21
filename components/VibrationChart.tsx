@@ -129,10 +129,7 @@ export function VibrationChart({ data, onTrainSelection }: VibrationChartProps) 
         >
           <CartesianGrid strokeDasharray="3 3" />
           <XAxis
-            dataKey="index"
-            type="number"
-            domain={[0, chartData.length - 1]}
-            tickFormatter={(index) => chartData[index]?.time || ''}
+            dataKey="time"
             label={{ value: 'Čas', position: 'insideBottom', offset: -5 }}
           />
           <YAxis
