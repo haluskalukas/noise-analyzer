@@ -158,12 +158,19 @@ export default function ZeleznicniDopravaHluk() {
 
     try {
       const savedProjects = JSON.parse(localStorage.getItem('zeleznicni-doprava-projekty') || '[]');
+
+      // Create lightweight project data - only save essential info, not raw noiseData
       const projectData = {
         id: `project-${Date.now()}`,
         name: projectName.trim(),
         timestamp: new Date().toISOString(),
         data: {
-          noiseData,
+          // Save only metadata from noiseData, not all the points
+          noiseMetadata: noiseData ? {
+            filename: noiseData.filename,
+            date: noiseData.date,
+            pointsCount: noiseData.points.length,
+          } : null,
           trains,
           userInputs: Object.fromEntries(userInputs),
           activeTab,
@@ -173,10 +180,14 @@ export default function ZeleznicniDopravaHluk() {
       };
       savedProjects.push(projectData);
       localStorage.setItem('zeleznicni-doprava-projekty', JSON.stringify(savedProjects));
-      alert(`Projekt "${projectName}" byl úspěšně uložen!`);
+      alert(`Projekt "${projectName}" byl úspěšně uložen!\n\nPoznámka: Graf nebude dostupný, ale všechny vlaky a výpočty jsou uložené.`);
     } catch (error) {
       console.error('Error saving project:', error);
-      alert('Nepodařilo se uložit projekt.');
+      if (error instanceof Error && error.name === 'QuotaExceededError') {
+        alert('Nepodařilo se uložit projekt - nedostatek místa v prohlížeči.\n\nZkus smazat některé staré projekty.');
+      } else {
+        alert('Nepodařilo se uložit projekt.');
+      }
     }
   };
 
@@ -188,17 +199,25 @@ export default function ZeleznicniDopravaHluk() {
 
       const data = project.data;
 
-      // Restore noiseData
-      if (data.noiseData) {
-        const restoredData = {
-          ...data.noiseData,
-          date: new Date(data.noiseData.date),
-          points: data.noiseData.points.map((p: any) => ({
-            ...p,
-            datetime: new Date(p.datetime),
-          })),
+      // Create mock noiseData from metadata so the UI works
+      if (data.noiseMetadata) {
+        const mockData: NoiseData = {
+          filename: data.noiseMetadata.filename,
+          date: new Date(data.noiseMetadata.date),
+          points: [], // Empty - graph won't work but that's ok
+          stats: {
+            min: 0,
+            max: 0,
+            avg: 0,
+            median: 0,
+            p10: 0,
+            p90: 0,
+            dayAvg: null,
+            nightAvg: null,
+            hourlyAvgs: [],
+          },
         };
-        setNoiseData(restoredData);
+        setNoiseData(mockData);
       }
 
       // Restore trains
@@ -225,7 +244,7 @@ export default function ZeleznicniDopravaHluk() {
         setDeletedIndices(new Set(data.deletedIndices));
       }
 
-      alert(`Projekt "${project.name}" byl načten!`);
+      alert(`Projekt "${project.name}" byl načten!\n\nGraf není dostupný (data nebyla uložena), ale všechny vlaky a výpočty jsou k dispozici.`);
     } catch (error) {
       console.error('Error loading project:', error);
       alert('Nepodařilo se načíst projekt.');

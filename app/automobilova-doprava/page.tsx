@@ -167,12 +167,20 @@ export default function Home() {
 
     try {
       const savedProjects = JSON.parse(localStorage.getItem('automobilova-doprava-projekty') || '[]');
+
+      // Create lightweight project data - save statistics but not all raw points
       const projectData = {
         id: `project-${Date.now()}`,
         name: projectName.trim(),
         timestamp: new Date().toISOString(),
         data: {
-          noiseData,
+          // Save only metadata and stats, not all the points
+          noiseMetadata: noiseData ? {
+            filename: noiseData.filename,
+            date: noiseData.date,
+            pointsCount: noiseData.points.length,
+            stats: currentStats || noiseData.stats,
+          } : null,
           deletedIndices: Array.from(deletedIndices),
           timeFilter,
           activeTab,
@@ -180,10 +188,14 @@ export default function Home() {
       };
       savedProjects.push(projectData);
       localStorage.setItem('automobilova-doprava-projekty', JSON.stringify(savedProjects));
-      alert(`Projekt "${projectName}" byl úspěšně uložen!`);
+      alert(`Projekt "${projectName}" byl úspěšně uložen!\n\nPoznámka: Graf nebude dostupný, ale statistiky jsou uložené.`);
     } catch (error) {
       console.error('Error saving project:', error);
-      alert('Nepodařilo se uložit projekt.');
+      if (error instanceof Error && error.name === 'QuotaExceededError') {
+        alert('Nepodařilo se uložit projekt - nedostatek místa v prohlížeči.\n\nZkus smazat některé staré projekty.');
+      } else {
+        alert('Nepodařilo se uložit projekt.');
+      }
     }
   };
 
@@ -195,17 +207,15 @@ export default function Home() {
 
       const data = project.data;
 
-      // Restore noiseData
-      if (data.noiseData) {
-        const restoredData = {
-          ...data.noiseData,
-          date: new Date(data.noiseData.date),
-          points: data.noiseData.points.map((p: any) => ({
-            ...p,
-            datetime: new Date(p.datetime),
-          })),
+      // Create mock noiseData from metadata so the UI works
+      if (data.noiseMetadata) {
+        const mockData: NoiseData = {
+          filename: data.noiseMetadata.filename,
+          date: new Date(data.noiseMetadata.date),
+          points: [], // Empty - graph won't work but that's ok
+          stats: data.noiseMetadata.stats,
         };
-        setNoiseData(restoredData);
+        setNoiseData(mockData);
       }
 
       // Restore other state
@@ -219,7 +229,7 @@ export default function Home() {
         setActiveTab(data.activeTab);
       }
 
-      alert(`Projekt "${project.name}" byl načten!`);
+      alert(`Projekt "${project.name}" byl načten!\n\nStatistiky jsou dostupné, ale graf není (data nebyla uložena).`);
     } catch (error) {
       console.error('Error loading project:', error);
       alert('Nepodařilo se načíst projekt.');
