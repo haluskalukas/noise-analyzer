@@ -112,13 +112,13 @@ export function VibrationTrainTable({
               <th className="px-3 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">
                 Směr
               </th>
-              <th className="px-3 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">
+              <th className="px-3 py-3 text-left text-xs font-medium text-gray-700 tracking-wider">
                 L<sub>aw</sub> X (dB)
               </th>
-              <th className="px-3 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">
+              <th className="px-3 py-3 text-left text-xs font-medium text-gray-700 tracking-wider">
                 L<sub>aw</sub> Y (dB)
               </th>
-              <th className="px-3 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">
+              <th className="px-3 py-3 text-left text-xs font-medium text-gray-700 tracking-wider">
                 L<sub>aw</sub> Z (dB)
               </th>
               <th className="px-3 py-3 text-center text-xs font-medium text-gray-700 uppercase tracking-wider">
