@@ -359,9 +359,9 @@ export function VibrationChart({ data, onTrainSelection }: VibrationChartProps) 
       const canvas = canvasRef.current;
       if (!canvas) return;
 
-      const rect = canvas.getBoundingClientRect();
-      const x1 = dragStartPos.x - rect.left;
-      const x2 = currentMousePos.x - rect.left;
+      // dragStartPos and currentMousePos already have rect.left subtracted from handleMouseDown
+      const x1 = dragStartPos.x;
+      const x2 = currentMousePos.x;
 
       const margin = { left: 60, right: 40 };
       const chartWidth = canvasSize.width - margin.left - margin.right;
