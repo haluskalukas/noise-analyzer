@@ -191,6 +191,113 @@ export default function ZeleznicniDopravaHluk() {
     }
   };
 
+  const handleDownloadProject = () => {
+    const projectName = prompt('Zadej název projektu:', noiseData?.filename.replace('.xlsx', '') || 'projekt');
+    if (!projectName || !projectName.trim()) return;
+
+    try {
+      // Create full project data with ALL information including raw data
+      const projectData = {
+        version: '1.0',
+        type: 'zeleznicni-doprava-hluk',
+        name: projectName.trim(),
+        timestamp: new Date().toISOString(),
+        data: {
+          noiseData,
+          trains,
+          userInputs: Object.fromEntries(userInputs),
+          activeTab,
+          timeFilter,
+          deletedIndices: Array.from(deletedIndices),
+        },
+      };
+
+      // Convert to JSON and create download
+      const jsonString = JSON.stringify(projectData, null, 2);
+      const blob = new Blob([jsonString], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `${projectName.trim()}_${new Date().toISOString().split('T')[0]}.json`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+
+      alert(`Projekt "${projectName}" byl stažen!\n\nSoubor obsahuje VŠECHNA data včetně grafu.`);
+    } catch (error) {
+      console.error('Error downloading project:', error);
+      alert('Nepodařilo se stáhnout projekt.');
+    }
+  };
+
+  const handleUploadProject = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      try {
+        const content = e.target?.result as string;
+        const projectData = JSON.parse(content);
+
+        // Validate project type
+        if (projectData.type !== 'zeleznicni-doprava-hluk') {
+          alert('Neplatný typ projektu. Tento soubor není pro železniční dopravu.');
+          return;
+        }
+
+        const data = projectData.data;
+
+        // Restore noiseData with Date objects
+        if (data.noiseData) {
+          const restoredData = {
+            ...data.noiseData,
+            date: new Date(data.noiseData.date),
+            points: data.noiseData.points.map((p: any) => ({
+              ...p,
+              datetime: new Date(p.datetime),
+            })),
+          };
+          setNoiseData(restoredData);
+        }
+
+        // Restore trains
+        if (data.trains) {
+          const restoredTrains = data.trains.map((t: any) => ({
+            ...t,
+            startTime: new Date(t.startTime),
+            endTime: new Date(t.endTime),
+          }));
+          setTrains(restoredTrains);
+        }
+
+        // Restore other state
+        if (data.userInputs) {
+          setUserInputs(new Map(Object.entries(data.userInputs)));
+        }
+        if (data.activeTab) {
+          setActiveTab(data.activeTab);
+        }
+        if (data.timeFilter) {
+          setTimeFilter(data.timeFilter);
+        }
+        if (data.deletedIndices) {
+          setDeletedIndices(new Set(data.deletedIndices));
+        }
+
+        alert(`Projekt "${projectData.name}" byl načten!\n\nVšechna data včetně grafu jsou k dispozici.`);
+      } catch (error) {
+        console.error('Error loading project:', error);
+        alert('Nepodařilo se načíst projekt. Ujisti se, že soubor je platný projekt.');
+      }
+    };
+    reader.readAsText(file);
+
+    // Reset input to allow loading the same file again
+    event.target.value = '';
+  };
+
   const handleLoadProject = (projectId: string) => {
     try {
       const savedProjects = JSON.parse(localStorage.getItem('zeleznicni-doprava-projekty') || '[]');
@@ -310,6 +417,22 @@ export default function ZeleznicniDopravaHluk() {
           <div className="max-w-3xl mx-auto">
             <FileUpload onDataLoaded={handleDataLoaded} />
 
+            {/* Upload Project File Section */}
+            <div className="mt-6 bg-purple-50 border border-purple-200 rounded-lg p-6">
+              <h3 className="text-sm font-medium text-purple-900 mb-3 flex items-center gap-2">
+                📤 Nahrát uložený projekt
+              </h3>
+              <p className="text-xs text-purple-700 mb-3">
+                Nahraj dříve stažený projekt (.json soubor) a pokračuj v práci se všemi daty.
+              </p>
+              <input
+                type="file"
+                accept=".json"
+                onChange={handleUploadProject}
+                className="block w-full text-sm text-gray-900 border border-purple-300 rounded-lg cursor-pointer bg-white focus:outline-none file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-purple-600 file:text-white hover:file:bg-purple-700"
+              />
+            </div>
+
             {/* Saved Projects Section */}
             {savedProjects.length > 0 && (
               <div className="mt-6 bg-green-50 border border-green-200 rounded-lg p-6">
@@ -376,10 +499,16 @@ export default function ZeleznicniDopravaHluk() {
               </div>
               <div className="flex gap-3">
                 <button
+                  onClick={handleDownloadProject}
+                  className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-md transition-colors flex items-center gap-2 shadow-sm"
+                >
+                  📥 Stáhnout projekt
+                </button>
+                <button
                   onClick={handleSaveProject}
                   className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-md transition-colors flex items-center gap-2 shadow-sm"
                 >
-                  💾 Uložit projekt
+                  💾 Uložit do prohlížeče
                 </button>
                 <button
                   onClick={handleReset}
