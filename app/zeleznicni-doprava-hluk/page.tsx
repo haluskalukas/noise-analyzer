@@ -212,8 +212,8 @@ export default function ZeleznicniDopravaHluk() {
             median: 0,
             p10: 0,
             p90: 0,
-            dayAvg: null,
-            nightAvg: null,
+            dayAvg: 0,
+            nightAvg: 0,
             hourlyAvgs: [],
           },
         };
