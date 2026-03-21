@@ -211,8 +211,10 @@ export function VibrationChart({ data, onTrainSelection }: VibrationChartProps) 
     }
 
     // Draw data line
-    ctx.strokeStyle = '#10b981';
-    ctx.lineWidth = 2;
+    ctx.strokeStyle = '#3b82f6';
+    ctx.lineWidth = 2.5;
+    ctx.lineJoin = 'round';
+    ctx.lineCap = 'round';
     ctx.beginPath();
 
     for (let i = 0; i < visibleData.length; i++) {
@@ -230,8 +232,8 @@ export function VibrationChart({ data, onTrainSelection }: VibrationChartProps) 
 
     // Draw selection rectangle if dragging in selection mode
     if (isDragging && dragMode === 'select') {
-      ctx.fillStyle = 'rgba(16, 185, 129, 0.1)';
-      ctx.strokeStyle = 'rgba(16, 185, 129, 0.5)';
+      ctx.fillStyle = 'rgba(59, 130, 246, 0.1)';
+      ctx.strokeStyle = 'rgba(59, 130, 246, 0.5)';
       ctx.lineWidth = 2;
 
       const x1 = Math.min(dragStartPos.x, currentMousePos.x);
@@ -262,7 +264,7 @@ export function VibrationChart({ data, onTrainSelection }: VibrationChartProps) 
       const y = yScale(point.value);
 
       // Draw point
-      ctx.fillStyle = '#10b981';
+      ctx.fillStyle = '#3b82f6';
       ctx.beginPath();
       ctx.arc(x, y, 4, 0, 2 * Math.PI);
       ctx.fill();
@@ -425,52 +427,84 @@ export function VibrationChart({ data, onTrainSelection }: VibrationChartProps) 
     }
   };
 
+  const zoomIn = () => setZoom(prev => Math.min(100, prev * 1.3));
+  const zoomOut = () => setZoom(prev => Math.max(1, prev / 1.3));
+  const resetZoom = () => { setZoom(1); setPan(0); };
+
   return (
-    <div className="space-y-4">
-      {/* Info */}
-      <div className="bg-gray-50 p-4 rounded-lg flex items-center justify-between">
-        <span className="text-sm font-medium text-gray-700">
-          Zobrazení: Osa Z, frekvence 50 Hz
-        </span>
-        <div className="flex items-center gap-4">
-          <span className="text-xs text-gray-600">
-            Zoom: {zoom.toFixed(1)}x
-          </span>
-          <button
-            onClick={() => { setZoom(1); setPan(0); }}
-            className="px-3 py-1 text-xs bg-gray-200 hover:bg-gray-300 rounded transition-colors"
-          >
-            Reset zoom
-          </button>
+    <div className="w-full space-y-4">
+      {/* Controls */}
+      <div className="bg-gradient-to-r from-blue-50 to-indigo-50 p-4 rounded-xl shadow-sm border border-blue-200">
+        <div className="flex items-center justify-between flex-wrap gap-3">
+          <div className="flex items-center gap-2">
+            <button
+              onClick={zoomIn}
+              className="px-4 py-2 bg-white hover:bg-blue-100 border-2 border-blue-300 hover:border-blue-500 text-gray-800 rounded-lg text-sm font-semibold transition-all shadow-sm hover:shadow-md"
+            >
+              🔍 +
+            </button>
+            <button
+              onClick={zoomOut}
+              className="px-4 py-2 bg-white hover:bg-blue-100 border-2 border-blue-300 hover:border-blue-500 text-gray-800 rounded-lg text-sm font-semibold transition-all shadow-sm hover:shadow-md"
+            >
+              🔍 −
+            </button>
+            <button
+              onClick={resetZoom}
+              className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-semibold transition-all shadow-sm hover:shadow-md"
+            >
+              ↺ Reset zoom
+            </button>
+          </div>
+
+          <div className="flex items-center gap-3 text-sm flex-wrap">
+            <label className="flex items-center gap-2 cursor-pointer bg-white px-3 py-2 rounded-lg border-2 border-purple-300 hover:border-purple-500">
+              <input
+                type="checkbox"
+                checked={wheelZoomEnabled}
+                onChange={(e) => setWheelZoomEnabled(e.target.checked)}
+                className="w-4 h-4"
+              />
+              <span className="text-gray-700 font-medium">🖱️ Kolečko zoom</span>
+            </label>
+
+            <span className="text-blue-700 font-medium">Zoom: {zoom.toFixed(1)}×</span>
+            {zoom > 1 && (
+              <span className="bg-blue-100 text-blue-700 px-3 py-1 rounded-full font-medium">
+                Zobrazeno {Math.ceil(chartData.length / zoom)} z {chartData.length} bodů
+              </span>
+            )}
+          </div>
+        </div>
+
+        <div className="mt-3 text-xs space-y-1">
+          <div className="flex items-center gap-2 text-blue-700">
+            <span className="font-semibold">💡 Ovládání:</span>
+            <span>Táhni myší = pohyb po grafu | Kolečko myši = zoom</span>
+          </div>
+          <div className="flex items-center gap-2 text-purple-700">
+            <span className="font-semibold">✨ Výběr vlaku:</span>
+            <span>Drž <kbd className="px-1.5 py-0.5 bg-white rounded border border-purple-300 font-mono text-xs">Alt/Option</kbd> + táhni myší = označí průjezd vlaku</span>
+          </div>
         </div>
       </div>
 
-      {/* Chart */}
-      <div ref={containerRef} className="w-full">
+      {/* Canvas Chart */}
+      <div ref={containerRef} className="bg-white rounded-xl shadow-lg p-4 border-2 border-gray-200 overflow-hidden">
         <canvas
           ref={canvasRef}
+          className={
+            isDragging && dragMode === 'pan' ? 'cursor-grabbing' :
+            isDragging && dragMode === 'select' ? 'cursor-crosshair' :
+            altKeyPressed ? 'cursor-crosshair' :
+            'cursor-grab'
+          }
+          style={{ touchAction: 'none' }}
           onMouseDown={handleMouseDown}
           onMouseMove={handleMouseMove}
           onMouseUp={handleMouseUp}
           onMouseLeave={handleMouseLeave}
-          style={{
-            cursor: altKeyPressed ? 'crosshair' : (isDragging && dragMode === 'pan') ? 'grabbing' : 'grab',
-            touchAction: 'none',
-          }}
-          className="border border-gray-200 rounded"
         />
-      </div>
-
-      {/* Instructions */}
-      <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-        <p className="text-sm text-blue-800">
-          <strong>💡 Ovládání:</strong>
-        </p>
-        <ul className="text-xs text-blue-700 mt-2 space-y-1 ml-4 list-disc">
-          <li>Tažení myší = posun grafu</li>
-          <li>Kolečko myši = zoom</li>
-          <li>Alt + tažení = výběr průjezdu vlaku</li>
-        </ul>
       </div>
     </div>
   );
