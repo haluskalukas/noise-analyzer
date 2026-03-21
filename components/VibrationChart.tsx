@@ -23,38 +23,38 @@ interface VibrationChartProps {
 export function VibrationChart({ data, onTrainSelection }: VibrationChartProps) {
   const [refAreaLeft, setRefAreaLeft] = useState<number | null>(null);
   const [refAreaRight, setRefAreaRight] = useState<number | null>(null);
-  const [selectedAxis, setSelectedAxis] = useState<'X' | 'Y' | 'Z'>('Z');
 
   // Calculate summary value for each point (for visualization)
   const chartData = useMemo(() => {
     if (!data || data.length === 0) return [];
 
-    return data.map((point, index) => {
-      // For X axis: indices 0-19
-      // For Y axis: indices 20-39
-      // For Z axis: indices 40-59
-      let startIdx = 0;
-      if (selectedAxis === 'Y') startIdx = 20;
-      if (selectedAxis === 'Z') startIdx = 40;
+    // Downsample if too many points (max 2000 points for performance)
+    const MAX_POINTS = 2000;
+    let processedData = data;
+    let step = 1;
 
-      // Calculate logarithmic average for selected axis
-      const axisValues = point.frequencies.slice(startIdx, startIdx + 20);
-      const validValues = axisValues.filter(v => !isNaN(v) && isFinite(v) && v > 0);
+    if (data.length > MAX_POINTS) {
+      step = Math.ceil(data.length / MAX_POINTS);
+      processedData = data.filter((_, idx) => idx % step === 0);
+    }
 
-      let avgValue = 0;
-      if (validValues.length > 0) {
-        const sumOfPowers = validValues.reduce((sum, db) => sum + Math.pow(10, db / 10), 0);
-        avgValue = 10 * Math.log10(sumOfPowers / validValues.length);
-      }
+    return processedData.map((point, index) => {
+      // For Z axis: show only 50 Hz frequency (index 57)
+      // Frequency 50 Hz is at position 17 in the list (0-indexed)
+      // For Z axis (indices 40-59), 50 Hz is at index 40 + 17 = 57
+      const freq50HzIndex = 57;
+
+      const value = point.frequencies[freq50HzIndex];
+      const validValue = (!isNaN(value) && isFinite(value)) ? value : 0;
 
       return {
-        index,
+        index: index * step,
         time: format(point.datetime, 'HH:mm:ss'),
-        value: isFinite(avgValue) ? avgValue : 0,
+        value: validValue,
         datetime: point.datetime,
       };
     });
-  }, [data, selectedAxis]);
+  }, [data]);
 
   const handleMouseDown = (e: any) => {
     if (e && e.activeLabel !== undefined && e.nativeEvent?.altKey) {
@@ -99,24 +99,9 @@ export function VibrationChart({ data, onTrainSelection }: VibrationChartProps) 
 
   return (
     <div className="space-y-4">
-      {/* Axis Selector */}
-      <div className="flex gap-3 bg-gray-50 p-4 rounded-lg">
-        <span className="text-sm font-medium text-gray-700">Zobrazit osu:</span>
-        <AxisButton
-          active={selectedAxis === 'X'}
-          onClick={() => setSelectedAxis('X')}
-          label="X (podélná)"
-        />
-        <AxisButton
-          active={selectedAxis === 'Y'}
-          onClick={() => setSelectedAxis('Y')}
-          label="Y (příčná)"
-        />
-        <AxisButton
-          active={selectedAxis === 'Z'}
-          onClick={() => setSelectedAxis('Z')}
-          label="Z (svislá)"
-        />
+      {/* Info */}
+      <div className="bg-gray-50 p-4 rounded-lg">
+        <span className="text-sm font-medium text-gray-700">Zobrazení: Osa Z, frekvence 50 Hz</span>
       </div>
 
       {/* Chart */}
@@ -134,7 +119,7 @@ export function VibrationChart({ data, onTrainSelection }: VibrationChartProps) 
           />
           <YAxis
             domain={[minValue, maxValue]}
-            label={{ value: `Vibrace - osa ${selectedAxis} (dB)`, angle: -90, position: 'insideLeft' }}
+            label={{ value: 'Vibrace - osa Z, 50 Hz (dB)', angle: -90, position: 'insideLeft' }}
           />
           <Tooltip
             content={({ active, payload }) => {
@@ -157,7 +142,7 @@ export function VibrationChart({ data, onTrainSelection }: VibrationChartProps) 
             stroke="#10b981"
             strokeWidth={2}
             dot={false}
-            name={`Osa ${selectedAxis}`}
+            name="Z osa, 50 Hz"
           />
 
           {refAreaLeft !== null && refAreaRight !== null && (
@@ -178,28 +163,5 @@ export function VibrationChart({ data, onTrainSelection }: VibrationChartProps) 
         </p>
       </div>
     </div>
-  );
-}
-
-function AxisButton({
-  active,
-  onClick,
-  label,
-}: {
-  active: boolean;
-  onClick: () => void;
-  label: string;
-}) {
-  return (
-    <button
-      onClick={onClick}
-      className={`px-4 py-2 rounded-md font-medium text-sm transition-colors ${
-        active
-          ? 'bg-emerald-600 text-white'
-          : 'bg-white text-gray-700 hover:bg-gray-100 border border-gray-300'
-      }`}
-    >
-      {label}
-    </button>
   );
 }
