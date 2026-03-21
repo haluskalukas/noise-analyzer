@@ -38,11 +38,8 @@ export function parseVibrationExcel(file: File): Promise<VibrationData> {
         const baseDate = XLSX.SSF.parse_date_code(excelDate);
         const measurementDate = new Date(baseDate.y, baseDate.m - 1, baseDate.d);
 
-        // Downsample large files to prevent memory issues
-        const MAX_POINTS = 10000;
-        const step = Math.max(1, Math.ceil((rawData.length - 1) / MAX_POINTS));
-
-        for (let i = 1; i < rawData.length; i += step) {
+        // No downsampling at parse time - we'll handle it in the chart component
+        for (let i = 1; i < rawData.length; i++) {
           const row = rawData[i];
 
           if (!row || row.length < 62) continue;
@@ -70,7 +67,14 @@ export function parseVibrationExcel(file: File): Promise<VibrationData> {
             milliseconds
           );
 
-          // Parse frequency values (columns 2-61 = 60 values)
+          // Parse only the 50 Hz frequency from Z axis for display
+          // Z axis: columns 42-61 (indices 41-60 in row, or 2+40 to 2+59)
+          // 50 Hz is at position 17 in the frequency list
+          // So column index is: 2 + 40 + 17 = 59
+          const freq50HzColumn = 59;
+          const freq50HzValue = parseFloat(row[freq50HzColumn]);
+
+          // Parse all 60 frequency values for calculations
           const frequencies: number[] = [];
           for (let j = 2; j < 62; j++) {
             const value = parseFloat(row[j]);
@@ -89,11 +93,7 @@ export function parseVibrationExcel(file: File): Promise<VibrationData> {
           return;
         }
 
-        // Log downsampling info if applied
-        const totalRows = rawData.length - 1;
-        if (step > 1) {
-          console.log(`Vibration data downsampled: ${totalRows} rows → ${points.length} points (every ${step}. row)`);
-        }
+        console.log(`Vibration data loaded: ${points.length} points`);
 
         resolve({
           filename: file.name,
