@@ -45,36 +45,16 @@ export function VibrationChart({ data, onTrainSelection }: VibrationChartProps) 
       const freq50HzIndex = 57;
 
       const value = point.frequencies[freq50HzIndex];
-      const validValue = (!isNaN(value) && isFinite(value) && value !== 0) ? value : 0;
-
-      // Debug first point
-      if (index === 0) {
-        console.log('VibrationChart - First point:', {
-          totalFrequencies: point.frequencies.length,
-          freq50HzValue: value,
-          allFrequencies: point.frequencies,
-          validValue,
-        });
-      }
+      const validValue = (!isNaN(value) && isFinite(value)) ? value : 0;
 
       return {
-        index: index * step,
+        index: index, // Use sequential index for proper chart rendering
+        originalIndex: index * step, // Keep original for train selection
         time: format(point.datetime, 'HH:mm:ss'),
         value: validValue,
         datetime: point.datetime,
       };
     });
-
-    // Debug chart data
-    if (result.length > 0) {
-      const nonZeroValues = result.filter(d => d.value !== 0);
-      console.log('VibrationChart data:', {
-        totalPoints: result.length,
-        nonZeroPoints: nonZeroValues.length,
-        firstValues: result.slice(0, 5).map(d => d.value),
-        sampleTimes: result.slice(0, 3).map(d => d.time),
-      });
-    }
 
     return result;
   }, [data]);
@@ -110,14 +90,16 @@ export function VibrationChart({ data, onTrainSelection }: VibrationChartProps) 
     if (chartData.length === 0) return 0;
     const values = chartData.map(d => d.value).filter(v => !isNaN(v) && isFinite(v));
     if (values.length === 0) return 0;
-    return Math.min(...values) - 5;
+    const min = Math.min(...values);
+    return Math.max(0, min - 5); // Don't go below 0
   }, [chartData]);
 
   const maxValue = useMemo(() => {
     if (chartData.length === 0) return 100;
     const values = chartData.map(d => d.value).filter(v => !isNaN(v) && isFinite(v));
     if (values.length === 0) return 100;
-    return Math.max(...values) + 5;
+    const max = Math.max(...values);
+    return max + 5;
   }, [chartData]);
 
   return (
@@ -139,10 +121,13 @@ export function VibrationChart({ data, onTrainSelection }: VibrationChartProps) 
           <XAxis
             dataKey="index"
             type="number"
-            domain={[0, 'dataMax']}
+            domain={[0, chartData.length - 1]}
             tickFormatter={(value) => {
-              const point = chartData.find(d => d.index === value);
-              return point ? point.time : '';
+              // value is the index (0, 1, 2, ...)
+              if (value >= 0 && value < chartData.length) {
+                return chartData[value]?.time || '';
+              }
+              return '';
             }}
             label={{ value: 'Čas', position: 'insideBottom', offset: -5 }}
             interval="preserveStartEnd"
