@@ -74,10 +74,35 @@ export function parseVibrationExcel(file: File): Promise<VibrationData> {
           const freq50HzValue = parseFloat(row[freq50HzColumn]);
 
           // Parse all 60 frequency values for calculations
+          // Columns: C-V (X), W-AP (Y), AQ-BJ (Z) = indices 2-61 in row array
           const frequencies: number[] = [];
           for (let j = 2; j < 62; j++) {
             const value = parseFloat(row[j]);
             frequencies.push(isNaN(value) ? 0 : value);
+          }
+
+          // Debug logging pro první řádek
+          if (i === 1) {
+            console.log('=== DEBUG PARSER - První řádek ===');
+            console.log('Čas:', datetime.toLocaleTimeString());
+            console.log('Celkem sloupců v řádku:', row.length);
+            console.log('Osa X (sloupce C-V, indexy 2-21):');
+            console.log('  f=1 Hz (index 2):', row[2]);
+            console.log('  f=50 Hz (index 19):', row[19]);
+            console.log('Osa Y (sloupce W-AP, indexy 22-41):');
+            console.log('  f=1 Hz (index 22):', row[22]);
+            console.log('  f=50 Hz (index 39):', row[39]);
+            console.log('Osa Z (sloupce AQ-BJ, indexy 42-61):');
+            console.log('  f=1 Hz (index 42):', row[42]);
+            console.log('  f=50 Hz (index 59):', row[59]);
+            console.log('');
+            console.log('Array frequencies (po parsování):');
+            console.log('  Index 0 (osa X, f=1 Hz):', frequencies[0]);
+            console.log('  Index 17 (osa X, f=50 Hz):', frequencies[17]);
+            console.log('  Index 20 (osa Y, f=1 Hz):', frequencies[20]);
+            console.log('  Index 37 (osa Y, f=50 Hz):', frequencies[37]);
+            console.log('  Index 40 (osa Z, f=1 Hz):', frequencies[40]);
+            console.log('  Index 57 (osa Z, f=50 Hz):', frequencies[57]);
           }
 
           points.push({
