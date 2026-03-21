@@ -27,6 +27,8 @@ export function VibrationChart({ data, onTrainSelection }: VibrationChartProps) 
 
   // Calculate summary value for each point (for visualization)
   const chartData = useMemo(() => {
+    if (!data || data.length === 0) return [];
+
     return data.map((point, index) => {
       // For X axis: indices 0-19
       // For Y axis: indices 20-39
@@ -37,13 +39,18 @@ export function VibrationChart({ data, onTrainSelection }: VibrationChartProps) 
 
       // Calculate logarithmic average for selected axis
       const axisValues = point.frequencies.slice(startIdx, startIdx + 20);
-      const sumOfPowers = axisValues.reduce((sum, db) => sum + Math.pow(10, db / 10), 0);
-      const avgValue = 10 * Math.log10(sumOfPowers / 20);
+      const validValues = axisValues.filter(v => !isNaN(v) && isFinite(v) && v > 0);
+
+      let avgValue = 0;
+      if (validValues.length > 0) {
+        const sumOfPowers = validValues.reduce((sum, db) => sum + Math.pow(10, db / 10), 0);
+        avgValue = 10 * Math.log10(sumOfPowers / validValues.length);
+      }
 
       return {
         index,
         time: format(point.datetime, 'HH:mm:ss'),
-        value: avgValue,
+        value: isFinite(avgValue) ? avgValue : 0,
         datetime: point.datetime,
       };
     });
@@ -77,11 +84,17 @@ export function VibrationChart({ data, onTrainSelection }: VibrationChartProps) 
   };
 
   const minValue = useMemo(() => {
-    return Math.min(...chartData.map(d => d.value)) - 5;
+    if (chartData.length === 0) return 0;
+    const values = chartData.map(d => d.value).filter(v => !isNaN(v) && isFinite(v));
+    if (values.length === 0) return 0;
+    return Math.min(...values) - 5;
   }, [chartData]);
 
   const maxValue = useMemo(() => {
-    return Math.max(...chartData.map(d => d.value)) + 5;
+    if (chartData.length === 0) return 100;
+    const values = chartData.map(d => d.value).filter(v => !isNaN(v) && isFinite(v));
+    if (values.length === 0) return 100;
+    return Math.max(...values) + 5;
   }, [chartData]);
 
   return (
