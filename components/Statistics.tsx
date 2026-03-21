@@ -1,14 +1,77 @@
 'use client';
 
 import { NoiseStats } from '@/types';
+import * as XLSX from 'xlsx';
 
 interface StatisticsProps {
   stats: NoiseStats;
 }
 
 export function Statistics({ stats }: StatisticsProps) {
+  const exportToExcel = () => {
+    // Create workbook
+    const wb = XLSX.utils.book_new();
+
+    // Sheet 1: Overall Statistics
+    const overallData = [
+      ['Celková statistika', ''],
+      ['', ''],
+      ['Ukazatel', 'Hodnota (dB)'],
+      ['Leq (Průměr)', stats.avg.toFixed(1)],
+      ['Medián', stats.median.toFixed(1)],
+      ['L10', stats.p10.toFixed(1)],
+      ['L90', stats.p90.toFixed(1)],
+      ['', ''],
+      ['Denní vs. Noční doba', ''],
+      ['', ''],
+      ['Období', 'Leq (dB)'],
+      ['Den (6:00 - 22:00)', stats.dayAvg.toFixed(1)],
+      ['Noc (22:00 - 6:00)', stats.nightAvg.toFixed(1)],
+      ['Rozdíl', Math.abs(stats.dayAvg - stats.nightAvg).toFixed(1)],
+    ];
+    const ws1 = XLSX.utils.aoa_to_sheet(overallData);
+    XLSX.utils.book_append_sheet(wb, ws1, 'Celková statistika');
+
+    // Sheet 2: Hourly Statistics
+    const hourlyData = [
+      ['Hodinové průměry', '', '', '', '', '', ''],
+      ['', '', '', '', '', '', ''],
+      ['Hodina', 'Leq (dB)', 'L5 (dB)', 'L10 (dB)', 'L90 (dB)', 'L95 (dB)', 'Počet měření'],
+    ];
+
+    stats.hourlyAvgs.forEach(hourly => {
+      const hourStart = hourly.hour.toString().padStart(2, '0');
+      const hourEnd = ((hourly.hour + 1) % 24).toString().padStart(2, '0');
+      hourlyData.push([
+        `${hourStart}:00 - ${hourEnd}:00`,
+        hourly.avg.toFixed(1),
+        hourly.p5.toFixed(1),
+        hourly.p10.toFixed(1),
+        hourly.p90.toFixed(1),
+        hourly.p95.toFixed(1),
+        hourly.count.toString(),
+      ]);
+    });
+
+    const ws2 = XLSX.utils.aoa_to_sheet(hourlyData);
+    XLSX.utils.book_append_sheet(wb, ws2, 'Hodinové průměry');
+
+    // Download file
+    const timestamp = new Date().toISOString().split('T')[0];
+    XLSX.writeFile(wb, `statistiky_hluku_${timestamp}.xlsx`);
+  };
   return (
     <div className="space-y-6">
+      {/* Export Button */}
+      <div className="flex justify-end">
+        <button
+          onClick={exportToExcel}
+          className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg text-sm font-semibold transition-all shadow-sm hover:shadow-md flex items-center gap-2"
+        >
+          📥 Export do Excel
+        </button>
+      </div>
+
       {/* Overall Statistics */}
       <div>
         <div className="flex items-center justify-between mb-4">
@@ -89,7 +152,7 @@ export function Statistics({ stats }: StatisticsProps) {
               {stats.hourlyAvgs.map((hourly) => (
                 <tr key={hourly.hour} className={hourly.hour >= 6 && hourly.hour < 22 ? '' : 'bg-blue-50'}>
                   <td className="px-3 py-3 whitespace-nowrap font-medium text-gray-900">
-                    {hourly.hour.toString().padStart(2, '0')}:00
+                    {hourly.hour.toString().padStart(2, '0')}:00 - {((hourly.hour + 1) % 24).toString().padStart(2, '0')}:00
                   </td>
                   <td className="px-3 py-3 whitespace-nowrap text-gray-700 font-semibold">
                     {hourly.avg.toFixed(1)}

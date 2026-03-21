@@ -134,7 +134,7 @@ export function FileUpload({ onDataLoaded }: FileUploadProps) {
         </div>
       )}
 
-      <div className="mt-6 space-y-4">
+      <div className="mt-6">
         <div className="p-4 bg-gray-50 rounded-md">
           <h3 className="text-sm font-medium text-gray-900 mb-2">
             Očekávaný formát Excel souboru:
@@ -144,22 +144,6 @@ export function FileUpload({ onDataLoaded }: FileUploadProps) {
             <p>• <strong>Sloupec 2:</strong> Čas (HH:MM nebo Excel čas)</p>
             <p>• <strong>Sloupec 3:</strong> Hodnota hluku v dB</p>
             <p className="mt-2 text-gray-500">Alternativně: Datum+Čas v jednom sloupci, hodnota ve druhém</p>
-          </div>
-        </div>
-
-        <div className="p-4 bg-blue-50 border border-blue-200 rounded-md">
-          <h3 className="text-sm font-medium text-blue-900 mb-2 flex items-center gap-2">
-            ℹ️ Logaritmické průměrování
-          </h3>
-          <div className="text-xs text-blue-800 space-y-1">
-            <p>Decibely se <strong>nesmí průměrovat aritmeticky</strong>!</p>
-            <p>Aplikace používá <strong>správný logaritmický vzorec</strong>:</p>
-            <p className="font-mono bg-white px-2 py-1 rounded mt-1">
-              L<sub>eq</sub> = 10 × log₁₀(1/n × Σ 10^(L<sub>i</sub>/10))
-            </p>
-            <p className="mt-2 text-blue-700">
-              Výsledné průměry odpovídají ekvivalentní hladině hluku (L<sub>eq</sub>).
-            </p>
           </div>
         </div>
       </div>
