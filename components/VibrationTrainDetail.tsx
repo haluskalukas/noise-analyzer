@@ -1,5 +1,6 @@
 'use client';
 
+import { useRef } from 'react';
 import { VibrationTrain, FREQUENCY_LIST, LIMIT_DB } from '@/types/vibration';
 import { Bar } from 'react-chartjs-2';
 import {
@@ -11,6 +12,7 @@ import {
   Tooltip,
   Legend,
 } from 'chart.js';
+import * as XLSX from 'xlsx';
 
 ChartJS.register(
   CategoryScale,
@@ -27,16 +29,19 @@ interface VibrationTrainDetailProps {
 }
 
 export function VibrationTrainDetail({ train, onClose }: VibrationTrainDetailProps) {
-  // Prepare chart data
+  const chartRef = useRef<ChartJS<'bar'>>(null);
+  // Prepare chart data - limit první (vzadu), pak osy
   const chartData = {
     labels: [...FREQUENCY_LIST.map(f => f.toString()), 'Law'],
     datasets: [
       {
         label: 'limit',
-        data: [...Array(FREQUENCY_LIST.length).fill(null), LIMIT_DB],
-        backgroundColor: 'rgba(200, 200, 200, 0.5)',
-        borderColor: 'rgba(150, 150, 150, 1)',
+        data: [...Array(FREQUENCY_LIST.length).fill(LIMIT_DB), LIMIT_DB],
+        backgroundColor: 'rgba(200, 200, 200, 0.3)',
+        borderColor: 'rgba(150, 150, 150, 0.5)',
         borderWidth: 1,
+        barPercentage: 1.0,
+        categoryPercentage: 1.0,
       },
       {
         label: 'osa X',
@@ -44,6 +49,8 @@ export function VibrationTrainDetail({ train, onClose }: VibrationTrainDetailPro
         backgroundColor: 'rgba(239, 68, 68, 0.7)',
         borderColor: 'rgba(220, 38, 38, 1)',
         borderWidth: 1,
+        barPercentage: 1.0,
+        categoryPercentage: 1.0,
       },
       {
         label: 'osa Y',
@@ -51,6 +58,8 @@ export function VibrationTrainDetail({ train, onClose }: VibrationTrainDetailPro
         backgroundColor: 'rgba(59, 130, 246, 0.7)',
         borderColor: 'rgba(37, 99, 235, 1)',
         borderWidth: 1,
+        barPercentage: 1.0,
+        categoryPercentage: 1.0,
       },
       {
         label: 'osa Z',
@@ -58,6 +67,8 @@ export function VibrationTrainDetail({ train, onClose }: VibrationTrainDetailPro
         backgroundColor: 'rgba(34, 197, 94, 0.7)',
         borderColor: 'rgba(22, 163, 74, 1)',
         borderWidth: 1,
+        barPercentage: 1.0,
+        categoryPercentage: 1.0,
       },
     ],
   };
@@ -121,6 +132,45 @@ export function VibrationTrainDetail({ train, onClose }: VibrationTrainDetailPro
   const startTime = `${train.startTime.getHours().toString().padStart(2, '0')}:${train.startTime.getMinutes().toString().padStart(2, '0')}:${train.startTime.getSeconds().toString().padStart(2, '0')}`;
   const endTime = `${train.endTime.getHours().toString().padStart(2, '0')}:${train.endTime.getMinutes().toString().padStart(2, '0')}:${train.endTime.getSeconds().toString().padStart(2, '0')}`;
 
+  const handleExportToExcel = async () => {
+    const wb = XLSX.utils.book_new();
+
+    // Prepare table data
+    const tableData = [
+      ['Vážené hladiny zrychlení vibrací v dB pro jednotlivá frekvenční pásma (Hz)'],
+      [''],
+      ['Osa', ...FREQUENCY_LIST.map(f => f.toString()), 'Law (dB)', 'Limit (dB)'],
+      ['X', ...train.rmsX.map(v => v.toFixed(1)), train.lawX.toFixed(1), LIMIT_DB.toFixed(1)],
+      ['Y', ...train.rmsY.map(v => v.toFixed(1)), train.lawY.toFixed(1), LIMIT_DB.toFixed(1)],
+      ['Z', ...train.rmsZ.map(v => v.toFixed(1)), train.lawZ.toFixed(1), LIMIT_DB.toFixed(1)],
+    ];
+
+    const ws = XLSX.utils.aoa_to_sheet(tableData);
+
+    // Add chart image if available
+    if (chartRef.current) {
+      const chartCanvas = chartRef.current.canvas;
+      if (chartCanvas) {
+        // Convert canvas to base64 image
+        const imageData = chartCanvas.toDataURL('image/png');
+
+        // Add image to worksheet (starting at row 10)
+        // Note: XLSX doesn't support images directly in free version
+        // We'll add a note instead
+        XLSX.utils.sheet_add_aoa(ws, [
+          [''],
+          ['Graf vibrací je dostupný v aplikaci'],
+          ['Pro export grafu použijte screenshot nebo print'],
+        ], { origin: 'A10' });
+      }
+    }
+
+    XLSX.utils.book_append_sheet(wb, ws, 'Detail vlaku');
+
+    const filename = `vibrace_vlak_${startTime.replace(/:/g, '-')}_${train.trakce || 'neznama'}.xlsx`;
+    XLSX.writeFile(wb, filename);
+  };
+
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
       <div className="bg-white rounded-xl shadow-2xl max-w-6xl w-full max-h-[90vh] overflow-auto">
@@ -132,21 +182,29 @@ export function VibrationTrainDetail({ train, onClose }: VibrationTrainDetailPro
               {startTime} - {endTime} | {train.trakce} | {train.druhVlaku}
             </p>
           </div>
-          <button
-            onClick={onClose}
-            className="text-white hover:bg-white hover:bg-opacity-20 rounded-lg p-2 transition-all"
-          >
-            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-            </svg>
-          </button>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={handleExportToExcel}
+              className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-all flex items-center gap-2"
+            >
+              📥 Export do Excel
+            </button>
+            <button
+              onClick={onClose}
+              className="text-white hover:bg-white hover:bg-opacity-20 rounded-lg p-2 transition-all"
+            >
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
         </div>
 
         <div className="p-6 space-y-6">
           {/* Chart */}
           <div className="bg-white border-2 border-gray-200 rounded-xl p-4">
             <div style={{ height: '400px' }}>
-              <Bar data={chartData} options={chartOptions} />
+              <Bar ref={chartRef} data={chartData} options={chartOptions} />
             </div>
           </div>
 
