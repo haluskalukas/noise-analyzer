@@ -27,7 +27,22 @@ export function VibrationChart({ data, onTrainSelection }: VibrationChartProps) 
 
   // Convert vibration data to chart format (extract 50 Hz from Z axis)
   const chartData = useMemo(() => {
-    return data.map((point) => {
+    if (!data || data.length === 0) return [];
+
+    // Downsample to max 5000 points to prevent stack overflow
+    const MAX_POINTS = 5000;
+    let step = 1;
+    let sampledData = data;
+
+    if (data.length > MAX_POINTS) {
+      step = Math.ceil(data.length / MAX_POINTS);
+      sampledData = [];
+      for (let i = 0; i < data.length; i += step) {
+        sampledData.push(data[i]);
+      }
+    }
+
+    return sampledData.map((point) => {
       // For Z axis: 50 Hz frequency (index 57)
       // Frequency 50 Hz is at position 17 in the list (0-indexed)
       // For Z axis (indices 40-59), 50 Hz is at index 40 + 17 = 57
