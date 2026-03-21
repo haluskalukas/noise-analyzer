@@ -42,18 +42,32 @@ export function VibrationChart({ data, onTrainSelection }: VibrationChartProps) 
       }
     }
 
-    return sampledData.map((point) => {
+    return sampledData.map((point, index) => {
       // For Z axis: 50 Hz frequency (index 57)
       // Frequency 50 Hz is at position 17 in the list (0-indexed)
       // For Z axis (indices 40-59), 50 Hz is at index 40 + 17 = 57
       const freq50HzIndex = 57;
       const value = point.frequencies[freq50HzIndex];
 
+      // Ensure datetime is a Date object
+      const datetime = point.datetime instanceof Date ? point.datetime : new Date(point.datetime);
+
+      if (index === 0) {
+        console.log('First chartData point:', {
+          datetime,
+          dateType: typeof datetime,
+          isDate: datetime instanceof Date,
+          formatted: format(datetime, 'HH:mm:ss'),
+          value,
+          allFreqs: point.frequencies.length
+        });
+      }
+
       return {
-        datetime: point.datetime,
+        datetime,
         value: (!isNaN(value) && isFinite(value)) ? value : 0,
-        hour: point.datetime.getHours(),
-        minute: point.datetime.getMinutes(),
+        hour: datetime.getHours(),
+        minute: datetime.getMinutes(),
       };
     });
   }, [data]);
