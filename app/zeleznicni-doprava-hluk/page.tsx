@@ -152,6 +152,115 @@ export default function ZeleznicniDopravaHluk() {
     setTrains(prev => prev.filter(train => train.id !== id));
   };
 
+  const handleSaveProject = () => {
+    const projectName = prompt('Zadej název projektu:');
+    if (!projectName || !projectName.trim()) return;
+
+    try {
+      const savedProjects = JSON.parse(localStorage.getItem('zeleznicni-doprava-projekty') || '[]');
+      const projectData = {
+        id: `project-${Date.now()}`,
+        name: projectName.trim(),
+        timestamp: new Date().toISOString(),
+        data: {
+          noiseData,
+          trains,
+          userInputs: Object.fromEntries(userInputs),
+          activeTab,
+          timeFilter,
+          deletedIndices: Array.from(deletedIndices),
+        },
+      };
+      savedProjects.push(projectData);
+      localStorage.setItem('zeleznicni-doprava-projekty', JSON.stringify(savedProjects));
+      alert(`Projekt "${projectName}" byl úspěšně uložen!`);
+    } catch (error) {
+      console.error('Error saving project:', error);
+      alert('Nepodařilo se uložit projekt.');
+    }
+  };
+
+  const handleLoadProject = (projectId: string) => {
+    try {
+      const savedProjects = JSON.parse(localStorage.getItem('zeleznicni-doprava-projekty') || '[]');
+      const project = savedProjects.find((p: any) => p.id === projectId);
+      if (!project) return;
+
+      const data = project.data;
+
+      // Restore noiseData
+      if (data.noiseData) {
+        const restoredData = {
+          ...data.noiseData,
+          date: new Date(data.noiseData.date),
+          points: data.noiseData.points.map((p: any) => ({
+            ...p,
+            datetime: new Date(p.datetime),
+          })),
+        };
+        setNoiseData(restoredData);
+      }
+
+      // Restore trains
+      if (data.trains) {
+        const restoredTrains = data.trains.map((t: any) => ({
+          ...t,
+          startTime: new Date(t.startTime),
+          endTime: new Date(t.endTime),
+        }));
+        setTrains(restoredTrains);
+      }
+
+      // Restore other state
+      if (data.userInputs) {
+        setUserInputs(new Map(Object.entries(data.userInputs)));
+      }
+      if (data.activeTab) {
+        setActiveTab(data.activeTab);
+      }
+      if (data.timeFilter) {
+        setTimeFilter(data.timeFilter);
+      }
+      if (data.deletedIndices) {
+        setDeletedIndices(new Set(data.deletedIndices));
+      }
+
+      alert(`Projekt "${project.name}" byl načten!`);
+    } catch (error) {
+      console.error('Error loading project:', error);
+      alert('Nepodařilo se načíst projekt.');
+    }
+  };
+
+  const handleDeleteProject = (projectId: string) => {
+    try {
+      const savedProjects = JSON.parse(localStorage.getItem('zeleznicni-doprava-projekty') || '[]');
+      const project = savedProjects.find((p: any) => p.id === projectId);
+      if (!project) return;
+
+      if (!confirm(`Opravdu chceš smazat projekt "${project.name}"?`)) return;
+
+      const filtered = savedProjects.filter((p: any) => p.id !== projectId);
+      localStorage.setItem('zeleznicni-doprava-projekty', JSON.stringify(filtered));
+      alert(`Projekt "${project.name}" byl smazán.`);
+    } catch (error) {
+      console.error('Error deleting project:', error);
+      alert('Nepodařilo se smazat projekt.');
+    }
+  };
+
+  const [savedProjects, setSavedProjects] = useState<any[]>([]);
+  const [showProjectsModal, setShowProjectsModal] = useState(false);
+
+  useEffect(() => {
+    try {
+      const projects = JSON.parse(localStorage.getItem('zeleznicni-doprava-projekty') || '[]');
+      setSavedProjects(projects);
+    } catch (error) {
+      console.error('Error loading projects list:', error);
+    }
+  }, [showProjectsModal]);
+
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
@@ -182,6 +291,44 @@ export default function ZeleznicniDopravaHluk() {
           <div className="max-w-3xl mx-auto">
             <FileUpload onDataLoaded={handleDataLoaded} />
 
+            {/* Saved Projects Section */}
+            {savedProjects.length > 0 && (
+              <div className="mt-6 bg-green-50 border border-green-200 rounded-lg p-6">
+                <h3 className="text-sm font-medium text-green-900 mb-3 flex items-center gap-2">
+                  💾 Uložené projekty
+                </h3>
+                <div className="space-y-2">
+                  {savedProjects.map((project) => (
+                    <div key={project.id} className="flex items-center justify-between bg-white rounded-lg p-3 shadow-sm">
+                      <div className="flex-1">
+                        <div className="font-medium text-gray-900">{project.name}</div>
+                        <div className="text-xs text-gray-500">
+                          {new Date(project.timestamp).toLocaleString('cs-CZ')}
+                        </div>
+                      </div>
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => handleLoadProject(project.id)}
+                          className="px-3 py-1 bg-green-600 hover:bg-green-700 text-white rounded text-sm transition-colors"
+                        >
+                          Načíst
+                        </button>
+                        <button
+                          onClick={() => {
+                            handleDeleteProject(project.id);
+                            setSavedProjects(prev => prev.filter(p => p.id !== project.id));
+                          }}
+                          className="px-3 py-1 bg-red-600 hover:bg-red-700 text-white rounded text-sm transition-colors"
+                        >
+                          Smazat
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
             <div className="mt-6 bg-blue-50 border border-blue-200 rounded-lg p-6">
               <h3 className="text-sm font-medium text-blue-900 mb-2 flex items-center gap-2">
                 💡 Jak používat tento modul
@@ -208,12 +355,20 @@ export default function ZeleznicniDopravaHluk() {
                   {format(noiseData.date, 'PPP', { locale: cs })} • {noiseData.points.length} měření • {trains.length} vlaků
                 </p>
               </div>
-              <button
-                onClick={handleReset}
-                className="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-md transition-colors"
-              >
-                Nahrát jiný soubor
-              </button>
+              <div className="flex gap-3">
+                <button
+                  onClick={handleSaveProject}
+                  className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-md transition-colors flex items-center gap-2 shadow-sm"
+                >
+                  💾 Uložit projekt
+                </button>
+                <button
+                  onClick={handleReset}
+                  className="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-md transition-colors"
+                >
+                  Nahrát jiný soubor
+                </button>
+              </div>
             </div>
 
             {/* Time Filter */}
