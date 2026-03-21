@@ -267,18 +267,28 @@ export function VibrationChart({ data, onTrainSelection }: VibrationChartProps) 
       ctx.arc(x, y, 4, 0, 2 * Math.PI);
       ctx.fill();
 
-      // Draw tooltip
-      const tooltipText = `${format(point.datetime, 'HH:mm:ss')}: ${point.value.toFixed(1)} dB`;
-      ctx.font = '12px sans-serif';
-      const textWidth = ctx.measureText(tooltipText).width;
-      const tooltipX = Math.min(x, width - textWidth - 20);
+      // Draw tooltip with highlighted time and value
+      const timeText = format(point.datetime, 'HH:mm:ss');
+      const valueText = `${point.value.toFixed(1)} dB`;
+      ctx.font = 'bold 13px sans-serif';
+      const timeWidth = ctx.measureText(timeText).width;
+      const valueWidth = ctx.measureText(valueText).width;
+      const totalWidth = timeWidth + valueWidth + 10; // 10px spacing between time and value
+
+      const tooltipX = Math.min(x, width - totalWidth - 20);
       const tooltipY = y - 30;
 
-      ctx.fillStyle = 'rgba(0, 0, 0, 0.8)';
-      ctx.fillRect(tooltipX - 5, tooltipY - 15, textWidth + 10, 25);
+      // Background
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.85)';
+      ctx.fillRect(tooltipX - 8, tooltipY - 18, totalWidth + 16, 28);
 
+      // Time in yellow/green
+      ctx.fillStyle = '#fbbf24';
+      ctx.fillText(timeText, tooltipX, tooltipY);
+
+      // Value in white
       ctx.fillStyle = '#ffffff';
-      ctx.fillText(tooltipText, tooltipX, tooltipY);
+      ctx.fillText(valueText, tooltipX + timeWidth + 10, tooltipY);
     }
 
   }, [chartData, canvasSize, zoom, pan, isDragging, dragMode, dragStartPos, currentMousePos, hoveredPoint]);
