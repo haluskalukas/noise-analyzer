@@ -11,7 +11,7 @@ export default function Home() {
     const states: Record<string, boolean> = {};
     states['automobilova-doprava'] = !!localStorage.getItem('automobilova-doprava-state');
     states['zeleznicni-doprava-hluk'] = !!localStorage.getItem('zeleznicni-doprava-hluk-state');
-    states['zeleznicni-doprava-vibrace'] = !!localStorage.getItem('zeleznicni-doprava-vibrace-state');
+    // Note: vibrace module doesn't use localStorage (files too large)
     setSavedStates(states);
   }, []);
 

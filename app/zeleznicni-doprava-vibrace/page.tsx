@@ -16,56 +16,8 @@ export default function ZeleznicniDopravaVibrace() {
   const [vibrationData, setVibrationData] = useState<VibrationData | null>(null);
   const [trains, setTrains] = useState<VibrationTrain[]>([]);
 
-  // Load from localStorage on mount
-  useEffect(() => {
-    try {
-      const saved = localStorage.getItem(STORAGE_KEY);
-      if (saved) {
-        const parsed = JSON.parse(saved);
-
-        // Restore vibrationData if available
-        if (parsed.vibrationData) {
-          const restoredData = {
-            ...parsed.vibrationData,
-            date: new Date(parsed.vibrationData.date),
-            points: parsed.vibrationData.points.map((p: any) => ({
-              ...p,
-              datetime: new Date(p.datetime),
-            })),
-          };
-          setVibrationData(restoredData);
-        }
-
-        if (parsed.trains) {
-          // Restore trains with Date objects
-          const restoredTrains = parsed.trains.map((t: any) => ({
-            ...t,
-            startTime: new Date(t.startTime),
-            endTime: new Date(t.endTime),
-          }));
-          setTrains(restoredTrains);
-        }
-      }
-    } catch (error) {
-      console.error('Error loading saved state:', error);
-    }
-  }, []);
-
-  // Save to localStorage whenever state changes
-  useEffect(() => {
-    if (vibrationData || trains.length > 0) {
-      try {
-        const toSave = {
-          vibrationData,
-          trains,
-          timestamp: new Date().toISOString(),
-        };
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(toSave));
-      } catch (error) {
-        console.error('Error saving state:', error);
-      }
-    }
-  }, [vibrationData, trains]);
+  // Note: We don't use localStorage for vibration data because files are too large
+  // Users should use Download/Upload project instead
 
   const handleDataLoaded = (data: VibrationData) => {
     setVibrationData(data);
@@ -268,6 +220,17 @@ export default function ZeleznicniDopravaVibrace() {
                 <p>3. Automaticky se vypočítá L<sub>aw</sub> pro osy X, Y, Z a RMS pro všechny frekvence</p>
                 <p>4. Do tabulky doplň údaje o vlaku (trakce, druh, počet vozů, směr)</p>
                 <p>5. Exportuj výsledky do Excelu</p>
+              </div>
+            </div>
+
+            <div className="mt-6 bg-amber-50 border border-amber-200 rounded-lg p-6">
+              <h3 className="text-sm font-medium text-amber-900 mb-2 flex items-center gap-2">
+                ⚠️ Důležité upozornění
+              </h3>
+              <div className="text-xs text-amber-800 space-y-2">
+                <p><strong>Data se NEUKLÁDAJÍ automaticky!</strong> Soubory vibrací jsou příliš velké pro prohlížeč.</p>
+                <p>Pro uložení práce použij tlačítko <strong>"📥 Stáhnout projekt"</strong> - vytvoří se .json soubor se VŠEMI daty.</p>
+                <p>Při příštím použití nahraj stažený projekt pomocí <strong>"📤 Nahrát uložený projekt"</strong>.</p>
               </div>
             </div>
           </div>
