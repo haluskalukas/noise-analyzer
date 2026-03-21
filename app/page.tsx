@@ -37,7 +37,7 @@ export default function Home() {
       description: 'Analýza vibrací ze železniční dopravy',
       icon: '🛤️',
       color: 'from-emerald-500 to-emerald-600',
-      available: false,
+      available: true,
     },
     {
       id: 'stacionarni-zdroje',
