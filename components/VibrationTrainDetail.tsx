@@ -67,6 +67,14 @@ export function VibrationTrainDetail({ train, onClose }: VibrationTrainDetailPro
   const chartOptions = {
     responsive: true,
     maintainAspectRatio: false,
+    layout: {
+      padding: {
+        left: 10,
+        right: 30,
+        top: 10,
+        bottom: 10,
+      }
+    },
     plugins: {
       legend: {
         position: 'top' as const,
@@ -138,28 +146,29 @@ export function VibrationTrainDetail({ train, onClose }: VibrationTrainDetailPro
 
     const ws = XLSX.utils.aoa_to_sheet(tableData);
 
-    // Add chart image if available
-    if (chartRef.current) {
-      const chartCanvas = chartRef.current.canvas;
-      if (chartCanvas) {
-        // Convert canvas to base64 image
-        const imageData = chartCanvas.toDataURL('image/png');
-
-        // Add image to worksheet (starting at row 10)
-        // Note: XLSX doesn't support images directly in free version
-        // We'll add a note instead
-        XLSX.utils.sheet_add_aoa(ws, [
-          [''],
-          ['Graf vibrací je dostupný v aplikaci'],
-          ['Pro export grafu použijte screenshot nebo print'],
-        ], { origin: 'A10' });
-      }
-    }
-
     XLSX.utils.book_append_sheet(wb, ws, 'Detail vlaku');
 
     const filename = `vibrace_vlak_${startTime.replace(/:/g, '-')}_${train.trakce || 'neznama'}.xlsx`;
     XLSX.writeFile(wb, filename);
+  };
+
+  const handleExportChartToPNG = () => {
+    if (chartRef.current) {
+      const chartCanvas = chartRef.current.canvas;
+      if (chartCanvas) {
+        // Convert canvas to blob and download
+        chartCanvas.toBlob((blob) => {
+          if (blob) {
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = `vibrace_graf_${startTime.replace(/:/g, '-')}_${train.trakce || 'neznama'}.png`;
+            link.click();
+            URL.revokeObjectURL(url);
+          }
+        });
+      }
+    }
   };
 
   return (
@@ -174,6 +183,12 @@ export function VibrationTrainDetail({ train, onClose }: VibrationTrainDetailPro
             </p>
           </div>
           <div className="flex items-center gap-3">
+            <button
+              onClick={handleExportChartToPNG}
+              className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-all flex items-center gap-2"
+            >
+              🖼️ Stáhnout graf PNG
+            </button>
             <button
               onClick={handleExportToExcel}
               className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-all flex items-center gap-2"

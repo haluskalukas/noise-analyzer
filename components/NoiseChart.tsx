@@ -386,7 +386,7 @@ export function NoiseChart({ data, filter, showAverage = true, deletedIndices, o
       const y = yScale(point.value);
 
       const tooltipText = `${formatNumber(point.value)} dB`;
-      const time = `${point.datetime.getHours().toString().padStart(2, '0')}:${point.datetime.getMinutes().toString().padStart(2, '0')}`;
+      const time = `${point.datetime.getHours().toString().padStart(2, '0')}:${point.datetime.getMinutes().toString().padStart(2, '0')}:${point.datetime.getSeconds().toString().padStart(2, '0')}`;
 
       ctx.font = '12px sans-serif';
       const textWidth = Math.max(ctx.measureText(tooltipText).width, ctx.measureText(time).width);
