@@ -2,6 +2,7 @@
 
 import { Train } from '@/types/train';
 import * as XLSX from 'xlsx';
+import { formatNumber } from '@/lib/format';
 
 interface TrainTableProps {
   trains: Train[];
@@ -29,9 +30,9 @@ export function TrainTable({ trains, onUpdateTrain, onDeleteTrain }: TrainTableP
         train.druhVlaku,
         train.pocetVozu,
         train.smer,
-        train.laeq.toFixed(1),
-        train.casPrujezdu.toFixed(1),
-        train.lae.toFixed(1),
+        formatNumber(train.laeq),
+        formatNumber(train.casPrujezdu),
+        formatNumber(train.lae),
       ]);
     });
 
@@ -152,13 +153,13 @@ export function TrainTable({ trains, onUpdateTrain, onDeleteTrain }: TrainTableP
                     />
                   </td>
                   <td className="px-3 py-3 whitespace-nowrap text-gray-700 font-semibold">
-                    {train.laeq.toFixed(1)}
+                    {formatNumber(train.laeq)}
                   </td>
                   <td className="px-3 py-3 whitespace-nowrap text-gray-600">
-                    {train.casPrujezdu.toFixed(1)}
+                    {formatNumber(train.casPrujezdu)}
                   </td>
                   <td className="px-3 py-3 whitespace-nowrap text-blue-700 font-semibold">
-                    {train.lae.toFixed(1)}
+                    {formatNumber(train.lae)}
                   </td>
                   <td className="px-3 py-3 whitespace-nowrap">
                     <button

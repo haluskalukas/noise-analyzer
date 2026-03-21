@@ -1,4 +1,5 @@
 'use client';
+import { formatNumber } from '@/lib/format';
 
 import { useMemo, useState, useRef, useEffect } from 'react';
 import { NoiseDataPoint, TimeFilter } from '@/types';
@@ -384,7 +385,7 @@ export function NoiseChart({ data, filter, showAverage = true, deletedIndices, o
       const x = xScale(hoveredPoint);
       const y = yScale(point.value);
 
-      const tooltipText = `${point.value.toFixed(1)} dB`;
+      const tooltipText = `${formatNumber(point.value)} dB`;
       const time = `${point.datetime.getHours().toString().padStart(2, '0')}:${point.datetime.getMinutes().toString().padStart(2, '0')}`;
 
       ctx.font = '12px sans-serif';
@@ -704,7 +705,7 @@ export function NoiseChart({ data, filter, showAverage = true, deletedIndices, o
               </button>
             )}
 
-            <span className="text-blue-700 font-medium">Zoom: {zoom.toFixed(1)}×</span>
+            <span className="text-blue-700 font-medium">Zoom: {formatNumber(zoom)}×</span>
             {zoom > 1 && (
               <span className="bg-blue-100 text-blue-700 px-3 py-1 rounded-full font-medium">
                 Zobrazeno {Math.ceil(filteredData.length / zoom)} z {filteredData.length} bodů
@@ -766,27 +767,27 @@ export function NoiseChart({ data, filter, showAverage = true, deletedIndices, o
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
           <div className="p-3 bg-gradient-to-br from-blue-50 to-blue-100 rounded-lg shadow-sm border border-blue-200">
             <p className="text-xs text-blue-700 font-medium mb-1">L<sub>eq</sub></p>
-            <p className="text-2xl font-bold text-blue-600">{visibleStats.leq.toFixed(1)}</p>
+            <p className="text-2xl font-bold text-blue-600">{formatNumber(visibleStats.leq)}</p>
             <p className="text-xs text-blue-600">dB</p>
           </div>
           <div className="p-3 bg-gradient-to-br from-purple-50 to-purple-100 rounded-lg shadow-sm border border-purple-200">
             <p className="text-xs text-purple-700 font-medium mb-1">L<sub>5</sub></p>
-            <p className="text-2xl font-bold text-purple-600">{visibleStats.l5.toFixed(1)}</p>
+            <p className="text-2xl font-bold text-purple-600">{formatNumber(visibleStats.l5)}</p>
             <p className="text-xs text-purple-600">dB</p>
           </div>
           <div className="p-3 bg-gradient-to-br from-indigo-50 to-indigo-100 rounded-lg shadow-sm border border-indigo-200">
             <p className="text-xs text-indigo-700 font-medium mb-1">L<sub>10</sub></p>
-            <p className="text-2xl font-bold text-indigo-600">{visibleStats.l10.toFixed(1)}</p>
+            <p className="text-2xl font-bold text-indigo-600">{formatNumber(visibleStats.l10)}</p>
             <p className="text-xs text-indigo-600">dB</p>
           </div>
           <div className="p-3 bg-gradient-to-br from-teal-50 to-teal-100 rounded-lg shadow-sm border border-teal-200">
             <p className="text-xs text-teal-700 font-medium mb-1">L<sub>90</sub></p>
-            <p className="text-2xl font-bold text-teal-600">{visibleStats.l90.toFixed(1)}</p>
+            <p className="text-2xl font-bold text-teal-600">{formatNumber(visibleStats.l90)}</p>
             <p className="text-xs text-teal-600">dB</p>
           </div>
           <div className="p-3 bg-gradient-to-br from-green-50 to-green-100 rounded-lg shadow-sm border border-green-200">
             <p className="text-xs text-green-700 font-medium mb-1">L<sub>95</sub></p>
-            <p className="text-2xl font-bold text-green-600">{visibleStats.l95.toFixed(1)}</p>
+            <p className="text-2xl font-bold text-green-600">{formatNumber(visibleStats.l95)}</p>
             <p className="text-xs text-green-600">dB</p>
           </div>
           <div className="p-3 bg-gradient-to-br from-gray-50 to-gray-100 rounded-lg shadow-sm border border-gray-200">

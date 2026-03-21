@@ -2,6 +2,7 @@
 
 import { NoiseStats } from '@/types';
 import * as XLSX from 'xlsx';
+import { formatNumber, formatNumberForExcel } from '@/lib/format';
 
 interface StatisticsProps {
   stats: NoiseStats;
@@ -17,17 +18,17 @@ export function Statistics({ stats }: StatisticsProps) {
       ['Celková statistika', ''],
       ['', ''],
       ['Ukazatel', 'Hodnota (dB)'],
-      ['Leq (Průměr)', stats.avg.toFixed(1)],
-      ['Medián', stats.median.toFixed(1)],
-      ['L10', stats.p10.toFixed(1)],
-      ['L90', stats.p90.toFixed(1)],
+      ['Leq (Průměr)', formatNumber(stats.avg)],
+      ['Medián', formatNumber(stats.median)],
+      ['L10', formatNumber(stats.p10)],
+      ['L90', formatNumber(stats.p90)],
       ['', ''],
       ['Denní vs. Noční doba', ''],
       ['', ''],
       ['Období', 'Leq (dB)'],
-      ['Den (6:00 - 22:00)', stats.dayAvg.toFixed(1)],
-      ['Noc (22:00 - 6:00)', stats.nightAvg.toFixed(1)],
-      ['Rozdíl', Math.abs(stats.dayAvg - stats.nightAvg).toFixed(1)],
+      ['Den (6:00 - 22:00)', formatNumber(stats.dayAvg)],
+      ['Noc (22:00 - 6:00)', formatNumber(stats.nightAvg)],
+      ['Rozdíl', formatNumber(Math.abs(stats.dayAvg - stats.nightAvg))],
     ];
     const ws1 = XLSX.utils.aoa_to_sheet(overallData);
     XLSX.utils.book_append_sheet(wb, ws1, 'Celková statistika');
@@ -44,11 +45,11 @@ export function Statistics({ stats }: StatisticsProps) {
       const hourEnd = ((hourly.hour + 1) % 24).toString().padStart(2, '0');
       hourlyData.push([
         `${hourStart}:00 - ${hourEnd}:00`,
-        hourly.avg.toFixed(1),
-        hourly.p5.toFixed(1),
-        hourly.p10.toFixed(1),
-        hourly.p90.toFixed(1),
-        hourly.p95.toFixed(1),
+        formatNumber(hourly.avg),
+        formatNumber(hourly.p5),
+        formatNumber(hourly.p10),
+        formatNumber(hourly.p90),
+        formatNumber(hourly.p95),
         hourly.count.toString(),
       ]);
     });
@@ -81,10 +82,10 @@ export function Statistics({ stats }: StatisticsProps) {
           </span>
         </div>
         <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-          <StatCard label="L_eq (Průměr)" value={`${stats.avg.toFixed(1)} dB`} color="blue" />
-          <StatCard label="Medián" value={`${stats.median.toFixed(1)} dB`} color="gray" />
-          <StatCard label="L_10 (10. percentil)" value={`${stats.p10.toFixed(1)} dB`} color="gray" />
-          <StatCard label="L_90 (90. percentil)" value={`${stats.p90.toFixed(1)} dB`} color="gray" />
+          <StatCard label="L_eq (Průměr)" value={`${formatNumber(stats.avg)} dB`} color="blue" />
+          <StatCard label="Medián" value={`${formatNumber(stats.median)} dB`} color="gray" />
+          <StatCard label="L_10 (10. percentil)" value={`${formatNumber(stats.p10)} dB`} color="gray" />
+          <StatCard label="L_90 (90. percentil)" value={`${formatNumber(stats.p90)} dB`} color="gray" />
         </div>
       </div>
 
@@ -97,21 +98,21 @@ export function Statistics({ stats }: StatisticsProps) {
               <span className="text-2xl">☀️</span>
               <span className="text-sm font-medium text-gray-700">Den (6:00 - 22:00)</span>
             </div>
-            <p className="text-3xl font-bold text-orange-600">{stats.dayAvg.toFixed(1)} dB</p>
+            <p className="text-3xl font-bold text-orange-600">{formatNumber(stats.dayAvg)} dB</p>
           </div>
           <div className="p-6 bg-gradient-to-br from-blue-50 to-indigo-50 rounded-lg border border-blue-200">
             <div className="flex items-center gap-2 mb-2">
               <span className="text-2xl">🌙</span>
               <span className="text-sm font-medium text-gray-700">Noc (22:00 - 6:00)</span>
             </div>
-            <p className="text-3xl font-bold text-indigo-600">{stats.nightAvg.toFixed(1)} dB</p>
+            <p className="text-3xl font-bold text-indigo-600">{formatNumber(stats.nightAvg)} dB</p>
           </div>
         </div>
         <div className="mt-4 p-4 bg-gray-50 rounded-lg">
           <p className="text-sm text-gray-700">
             <strong>Rozdíl:</strong>{' '}
             <span className={stats.dayAvg > stats.nightAvg ? 'text-orange-600' : 'text-indigo-600'}>
-              {Math.abs(stats.dayAvg - stats.nightAvg).toFixed(1)} dB{' '}
+              {formatNumber(Math.abs(stats.dayAvg - stats.nightAvg))} dB{' '}
               ({stats.dayAvg > stats.nightAvg ? 'den je hlučnější' : 'noc je hlučnější'})
             </span>
           </p>
@@ -155,19 +156,19 @@ export function Statistics({ stats }: StatisticsProps) {
                     {hourly.hour.toString().padStart(2, '0')}:00 - {((hourly.hour + 1) % 24).toString().padStart(2, '0')}:00
                   </td>
                   <td className="px-3 py-3 whitespace-nowrap text-gray-700 font-semibold">
-                    {hourly.avg.toFixed(1)}
+                    {formatNumber(hourly.avg)}
                   </td>
                   <td className="px-3 py-3 whitespace-nowrap text-gray-600">
-                    {hourly.p5.toFixed(1)}
+                    {formatNumber(hourly.p5)}
                   </td>
                   <td className="px-3 py-3 whitespace-nowrap text-gray-600">
-                    {hourly.p10.toFixed(1)}
+                    {formatNumber(hourly.p10)}
                   </td>
                   <td className="px-3 py-3 whitespace-nowrap text-gray-600">
-                    {hourly.p90.toFixed(1)}
+                    {formatNumber(hourly.p90)}
                   </td>
                   <td className="px-3 py-3 whitespace-nowrap text-gray-600">
-                    {hourly.p95.toFixed(1)}
+                    {formatNumber(hourly.p95)}
                   </td>
                   <td className="px-3 py-3 whitespace-nowrap text-gray-500">
                     {hourly.count}
