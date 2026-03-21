@@ -38,7 +38,11 @@ export function parseVibrationExcel(file: File): Promise<VibrationData> {
         const baseDate = XLSX.SSF.parse_date_code(excelDate);
         const measurementDate = new Date(baseDate.y, baseDate.m - 1, baseDate.d);
 
-        for (let i = 1; i < rawData.length; i++) {
+        // Downsample large files to prevent memory issues
+        const MAX_POINTS = 10000;
+        const step = Math.max(1, Math.ceil((rawData.length - 1) / MAX_POINTS));
+
+        for (let i = 1; i < rawData.length; i += step) {
           const row = rawData[i];
 
           if (!row || row.length < 62) continue;
@@ -83,6 +87,12 @@ export function parseVibrationExcel(file: File): Promise<VibrationData> {
         if (points.length === 0) {
           reject(new Error('Nepodařilo se načíst žádná data'));
           return;
+        }
+
+        // Log downsampling info if applied
+        const totalRows = rawData.length - 1;
+        if (step > 1) {
+          console.log(`Vibration data downsampled: ${totalRows} rows → ${points.length} points (every ${step}. row)`);
         }
 
         resolve({
