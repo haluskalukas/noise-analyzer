@@ -5,6 +5,7 @@ import { VibrationTrain, LIMIT_DB } from '@/types/vibration';
 import { format } from 'date-fns';
 import * as XLSX from 'xlsx';
 import { VibrationTrainDetail } from './VibrationTrainDetail';
+import { formatNumber } from '@/lib/format';
 
 interface VibrationTrainTableProps {
   trains: VibrationTrain[];
@@ -33,9 +34,9 @@ export function VibrationTrainTable({
       'Druh vlaku': train.druhVlaku,
       'Počet vozů': train.pocetVozu,
       'Směr': train.smer,
-      'Law X (dB)': train.lawX.toFixed(2),
-      'Law Y (dB)': train.lawY.toFixed(2),
-      'Law Z (dB)': train.lawZ.toFixed(2),
+      'Law X (dB)': formatNumber(train.lawX),
+      'Law Y (dB)': formatNumber(train.lawY),
+      'Law Z (dB)': formatNumber(train.lawZ),
     }));
 
     // Create worksheet
@@ -175,17 +176,17 @@ export function VibrationTrainTable({
                 </td>
                 <td className="px-3 py-3 whitespace-nowrap text-sm">
                   <span className={train.lawX > LIMIT_DB ? 'text-red-600 font-semibold' : 'text-gray-900'}>
-                    {train.lawX.toFixed(1)}
+                    {formatNumber(train.lawX)}
                   </span>
                 </td>
                 <td className="px-3 py-3 whitespace-nowrap text-sm">
                   <span className={train.lawY > LIMIT_DB ? 'text-red-600 font-semibold' : 'text-gray-900'}>
-                    {train.lawY.toFixed(1)}
+                    {formatNumber(train.lawY)}
                   </span>
                 </td>
                 <td className="px-3 py-3 whitespace-nowrap text-sm">
                   <span className={train.lawZ > LIMIT_DB ? 'text-red-600 font-semibold' : 'text-gray-900'}>
-                    {train.lawZ.toFixed(1)}
+                    {formatNumber(train.lawZ)}
                   </span>
                 </td>
                 <td className="px-3 py-3 whitespace-nowrap text-center">

@@ -3,6 +3,7 @@
 import { useMemo, useState, useRef, useEffect } from 'react';
 import { VibrationDataPoint } from '@/types/vibration';
 import { format } from 'date-fns';
+import { formatNumber } from '@/lib/format';
 
 interface VibrationChartProps {
   data: VibrationDataPoint[];
@@ -263,7 +264,7 @@ export function VibrationChart({ data, onTrainSelection }: VibrationChartProps) 
       const x = xScale(hoveredPoint);
       const y = yScale(point.value);
 
-      const tooltipText = `${point.value.toFixed(1)} dB`;
+      const tooltipText = `${formatNumber(point.value)} dB`;
       const time = format(point.datetime, 'HH:mm:ss');
 
       ctx.font = '12px sans-serif';

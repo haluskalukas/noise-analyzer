@@ -13,6 +13,7 @@ import {
   Legend,
 } from 'chart.js';
 import * as XLSX from 'xlsx';
+import { formatNumber } from '@/lib/format';
 
 ChartJS.register(
   CategoryScale,
@@ -95,7 +96,7 @@ export function VibrationTrainDetail({ train, onClose }: VibrationTrainDetailPro
               label += ': ';
             }
             if (context.parsed.y !== null) {
-              label += context.parsed.y.toFixed(1) + ' dB';
+              label += context.parsed.y.toFixed(1).replace('.', ',') + ' dB';
             }
             return label;
           }
@@ -139,9 +140,9 @@ export function VibrationTrainDetail({ train, onClose }: VibrationTrainDetailPro
       ['Vážené hladiny zrychlení vibrací v dB pro jednotlivá frekvenční pásma (Hz)'],
       [''],
       ['Osa', ...FREQUENCY_LIST.map(f => f.toString()), 'Law (dB)', 'Limit (dB)'],
-      ['X', ...train.rmsX.map(v => v.toFixed(1)), train.lawX.toFixed(1), LIMIT_DB.toFixed(1)],
-      ['Y', ...train.rmsY.map(v => v.toFixed(1)), train.lawY.toFixed(1), LIMIT_DB.toFixed(1)],
-      ['Z', ...train.rmsZ.map(v => v.toFixed(1)), train.lawZ.toFixed(1), LIMIT_DB.toFixed(1)],
+      ['X', ...train.rmsX.map(v => formatNumber(v)), formatNumber(train.lawX), formatNumber(LIMIT_DB)],
+      ['Y', ...train.rmsY.map(v => formatNumber(v)), formatNumber(train.lawY), formatNumber(LIMIT_DB)],
+      ['Z', ...train.rmsZ.map(v => formatNumber(v)), formatNumber(train.lawZ), formatNumber(LIMIT_DB)],
     ];
 
     const ws = XLSX.utils.aoa_to_sheet(tableData);
@@ -249,14 +250,14 @@ export function VibrationTrainDetail({ train, onClose }: VibrationTrainDetailPro
                     </td>
                     {train.rmsX.map((value, i) => (
                       <td key={i} className="px-3 py-3 text-center border-r">
-                        {value.toFixed(1)}
+                        {formatNumber(value)}
                       </td>
                     ))}
                     <td className={`px-4 py-3 text-center font-bold border-r ${train.lawX > LIMIT_DB ? 'bg-red-100 text-red-700' : 'bg-blue-50'}`}>
-                      {train.lawX.toFixed(1)}
+                      {formatNumber(train.lawX)}
                     </td>
                     <td className="px-4 py-3 text-center font-bold bg-gray-100">
-                      {LIMIT_DB.toFixed(1)}
+                      {formatNumber(LIMIT_DB)}
                     </td>
                   </tr>
 
@@ -267,14 +268,14 @@ export function VibrationTrainDetail({ train, onClose }: VibrationTrainDetailPro
                     </td>
                     {train.rmsY.map((value, i) => (
                       <td key={i} className="px-3 py-3 text-center border-r">
-                        {value.toFixed(1)}
+                        {formatNumber(value)}
                       </td>
                     ))}
                     <td className={`px-4 py-3 text-center font-bold border-r ${train.lawY > LIMIT_DB ? 'bg-red-100 text-red-700' : 'bg-blue-50'}`}>
-                      {train.lawY.toFixed(1)}
+                      {formatNumber(train.lawY)}
                     </td>
                     <td className="px-4 py-3 text-center font-bold bg-gray-100">
-                      {LIMIT_DB.toFixed(1)}
+                      {formatNumber(LIMIT_DB)}
                     </td>
                   </tr>
 
@@ -285,14 +286,14 @@ export function VibrationTrainDetail({ train, onClose }: VibrationTrainDetailPro
                     </td>
                     {train.rmsZ.map((value, i) => (
                       <td key={i} className="px-3 py-3 text-center border-r">
-                        {value.toFixed(1)}
+                        {formatNumber(value)}
                       </td>
                     ))}
                     <td className={`px-4 py-3 text-center font-bold border-r ${train.lawZ > LIMIT_DB ? 'bg-red-100 text-red-700' : 'bg-blue-50'}`}>
-                      {train.lawZ.toFixed(1)}
+                      {formatNumber(train.lawZ)}
                     </td>
                     <td className="px-4 py-3 text-center font-bold bg-gray-100">
-                      {LIMIT_DB.toFixed(1)}
+                      {formatNumber(LIMIT_DB)}
                     </td>
                   </tr>
                 </tbody>
