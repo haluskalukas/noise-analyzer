@@ -21,7 +21,7 @@ export function parseVibrationExcel(file: File): Promise<VibrationData> {
         const rawData: any[][] = XLSX.utils.sheet_to_json(worksheet, {
           header: 1,
           defval: null,
-          raw: false
+          raw: true // Keep raw values (numbers for dates/times)
         });
 
         if (rawData.length < 2) {
@@ -48,6 +48,18 @@ export function parseVibrationExcel(file: File): Promise<VibrationData> {
           const excelSerialDate = typeof row[0] === 'number' ? row[0] : 0;
           const excelSerialTime = typeof row[1] === 'number' ? row[1] : 0;
 
+          // Debug first row
+          if (i === 1) {
+            console.log('First data row:', {
+              row0: row[0],
+              row0Type: typeof row[0],
+              row1: row[1],
+              row1Type: typeof row[1],
+              excelSerialDate,
+              excelSerialTime
+            });
+          }
+
           const dateInfo = XLSX.SSF.parse_date_code(excelSerialDate);
           const timeInDays = excelSerialTime;
           const timeInSeconds = timeInDays * 24 * 60 * 60;
@@ -66,6 +78,17 @@ export function parseVibrationExcel(file: File): Promise<VibrationData> {
             seconds,
             milliseconds
           );
+
+          // Debug first datetime
+          if (i === 1) {
+            console.log('First datetime parsed:', {
+              datetime,
+              dateInfo,
+              hours,
+              minutes,
+              seconds
+            });
+          }
 
           // Parse only the 50 Hz frequency from Z axis for display
           // Z axis: columns 42-61 (indices 41-60 in row, or 2+40 to 2+59)
