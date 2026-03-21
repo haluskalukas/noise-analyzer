@@ -189,10 +189,12 @@ export function TrainCalculations({ trains }: TrainCalculationsProps) {
                 </td>
                 <td className="px-4 py-3">
                   <input
-                    type="number"
-                    min="0"
-                    value={cat.pocetVlakuDen}
+                    type="text"
+                    inputMode="numeric"
+                    pattern="[0-9]*"
+                    value={cat.pocetVlakuDen || ''}
                     onChange={(e) => handleCountChange(cat.kategorie, 'pocetVlakuDen', e.target.value)}
+                    placeholder="0"
                     className="w-24 px-2 py-1 border border-gray-300 rounded text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                   />
                 </td>
@@ -201,10 +203,12 @@ export function TrainCalculations({ trains }: TrainCalculationsProps) {
                 </td>
                 <td className="px-4 py-3">
                   <input
-                    type="number"
-                    min="0"
-                    value={cat.pocetVlakuNoc}
+                    type="text"
+                    inputMode="numeric"
+                    pattern="[0-9]*"
+                    value={cat.pocetVlakuNoc || ''}
                     onChange={(e) => handleCountChange(cat.kategorie, 'pocetVlakuNoc', e.target.value)}
+                    placeholder="0"
                     className="w-24 px-2 py-1 border border-gray-300 rounded text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                   />
                 </td>
