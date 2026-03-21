@@ -25,7 +25,20 @@ export function calculateTrainRMS(points: VibrationDataPoint[]): {
   // Initialize sums for all 60 values (3 axes × 20 frequencies)
   const sumsSquared: number[] = new Array(60).fill(0);
 
-  console.log('--- KROK 1: Zpracování bodů (ukázka prvních 3) ---');
+  console.log('--- KROK 1: Zpracování bodů ---');
+  console.log(`Čas prvního bodu: ${points[0]?.datetime.toLocaleTimeString()}`);
+  console.log(`Čas posledního bodu: ${points[points.length - 1]?.datetime.toLocaleTimeString()}`);
+  console.log('');
+
+  console.log('Surové hodnoty z prvního bodu pro osu Z (indexy 40-59):');
+  for (let i = 40; i < 60; i++) {
+    const freqIndex = i - 40;
+    const freq = [1, 1.25, 1.6, 2, 2.5, 3.15, 4, 5, 6.3, 8, 10, 12.5, 16, 20, 25, 31.5, 40, 50, 63, 80][freqIndex];
+    console.log(`  f=${freq} Hz: ${points[0].frequencies[i].toFixed(2)} dB`);
+  }
+  console.log('');
+
+  console.log('Zpracování všech bodů (ukázka 1 Hz na ose Z, index 40):');
   // Process each time point
   points.forEach((point, pointIdx) => {
     for (let i = 0; i < 60; i++) {
@@ -35,9 +48,9 @@ export function calculateTrainRMS(points: VibrationDataPoint[]): {
       const squared = lin * lin;
       sumsSquared[i] += squared;
 
-      // Log prvních pár bodů pro frekvenci 50 Hz na ose Z (index 57)
-      if (i === 57 && pointIdx < 3) {
-        console.log(`Bod ${pointIdx + 1}: dB=${dB.toFixed(2)} → lin=${lin.toFixed(4)} → ²=${squared.toFixed(4)}`);
+      // Log prvních pár bodů pro frekvenci 1 Hz na ose Z (index 40)
+      if (i === 40 && pointIdx < 5) {
+        console.log(`  Bod ${pointIdx + 1} (${point.datetime.toLocaleTimeString()}): dB=${dB.toFixed(2)} → lin=${lin.toFixed(4)} → ²=${squared.toFixed(4)}`);
       }
     }
   });
