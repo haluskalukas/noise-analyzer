@@ -6,6 +6,7 @@ import { StationaryFileUpload } from '@/components/StationaryFileUpload';
 import { StationaryChart } from '@/components/StationaryChart';
 import { StationarySourceTable } from '@/components/StationarySourceTable';
 import { StationaryCalculations } from '@/components/StationaryCalculations';
+import { StationaryConclusion } from '@/components/StationaryConclusion';
 import { SourceTypeDialog } from '@/components/SourceTypeDialog';
 import { StationaryData, StationaryDataPoint, StationarySource, STATIONARY_FREQUENCY_LIST } from '@/types/stationary';
 import { calculateStationaryStats, detectTonalComponents } from '@/lib/stationaryCalculations';
@@ -23,7 +24,8 @@ export default function StacionarniZdroje() {
     points: StationaryDataPoint[];
   } | null>(null);
   const [savedProjects, setSavedProjects] = useState<any[]>([]);
-  const [activeTab, setActiveTab] = useState<'sources' | 'calculations'>('sources');
+  const [activeTab, setActiveTab] = useState<'sources' | 'calculations' | 'conclusion'>('sources');
+  const [reflectionCorrections, setReflectionCorrections] = useState<Map<string, boolean>>(new Map());
 
   // Load from localStorage on mount
   useEffect(() => {
@@ -54,6 +56,11 @@ export default function StacionarniZdroje() {
           }));
           setSources(restoredSources);
         }
+
+        // Restore reflection corrections
+        if (parsed.reflectionCorrections) {
+          setReflectionCorrections(new Map(parsed.reflectionCorrections));
+        }
       }
 
       // Load saved projects
@@ -71,6 +78,7 @@ export default function StacionarniZdroje() {
         const toSave = {
           stationaryData,
           sources,
+          reflectionCorrections: Array.from(reflectionCorrections.entries()),
           timestamp: new Date().toISOString(),
         };
         localStorage.setItem(STORAGE_KEY, JSON.stringify(toSave));
@@ -78,7 +86,7 @@ export default function StacionarniZdroje() {
         console.error('Error saving state:', error);
       }
     }
-  }, [stationaryData, sources]);
+  }, [stationaryData, sources, reflectionCorrections]);
 
   const handleDataLoaded = (data: StationaryData) => {
     setStationaryData(data);
@@ -174,6 +182,7 @@ export default function StacionarniZdroje() {
             pointsCount: stationaryData.points.length,
           } : null,
           sources,
+          reflectionCorrections: Array.from(reflectionCorrections.entries()),
         },
       };
       savedProjects.push(projectData);
@@ -218,6 +227,11 @@ export default function StacionarniZdroje() {
         setSources(restoredSources);
       }
 
+      // Restore reflection corrections
+      if (data.reflectionCorrections) {
+        setReflectionCorrections(new Map(data.reflectionCorrections));
+      }
+
       alert(`Projekt "${project.name}" byl načten!\n\nZdroje jsou dostupné, ale graf není (data nebyla uložena).`);
     } catch (error) {
       console.error('Error loading project:', error);
@@ -238,6 +252,7 @@ export default function StacionarniZdroje() {
         data: {
           stationaryData,
           sources,
+          reflectionCorrections: Array.from(reflectionCorrections.entries()),
         },
       };
 
@@ -297,6 +312,11 @@ export default function StacionarniZdroje() {
             endTime: new Date(s.endTime),
           }));
           setSources(restoredSources);
+        }
+
+        // Restore reflection corrections
+        if (data.reflectionCorrections) {
+          setReflectionCorrections(new Map(data.reflectionCorrections));
         }
 
         alert(`Projekt "${projectData.name}" byl úspěšně nahrán!`);
@@ -476,6 +496,11 @@ export default function StacionarniZdroje() {
                     onClick={() => setActiveTab('calculations')}
                     label="📊 Dopočet"
                   />
+                  <TabButton
+                    active={activeTab === 'conclusion'}
+                    onClick={() => setActiveTab('conclusion')}
+                    label="✅ Závěr"
+                  />
                 </nav>
               </div>
 
@@ -491,6 +516,15 @@ export default function StacionarniZdroje() {
                   <StationaryCalculations
                     sources={sources}
                     allSources={sources}
+                    reflectionCorrections={reflectionCorrections}
+                    onReflectionCorrectionsChange={setReflectionCorrections}
+                  />
+                )}
+                {activeTab === 'conclusion' && (
+                  <StationaryConclusion
+                    sources={sources}
+                    allSources={sources}
+                    reflectionCorrections={reflectionCorrections}
                   />
                 )}
               </div>

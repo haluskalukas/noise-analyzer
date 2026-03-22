@@ -8,13 +8,11 @@ import * as XLSX from 'xlsx';
 interface StationaryCalculationsProps {
   sources: StationarySource[];
   allSources: StationarySource[];
+  reflectionCorrections: Map<string, boolean>;
+  onReflectionCorrectionsChange: (corrections: Map<string, boolean>) => void;
 }
 
-export function StationaryCalculations({ sources, allSources }: StationaryCalculationsProps) {
-  // Track which sources have reflection correction enabled
-  const [reflectionCorrections, setReflectionCorrections] = useState<Map<string, boolean>>(
-    new Map(sources.map(s => [s.id, false]))
-  );
+export function StationaryCalculations({ sources, allSources, reflectionCorrections, onReflectionCorrectionsChange }: StationaryCalculationsProps) {
 
   // Find background for each source
   const getBackgroundForSource = (source: StationarySource) => {
@@ -320,7 +318,7 @@ export function StationaryCalculations({ sources, allSources }: StationaryCalcul
                             onChange={(e) => {
                               const newMap = new Map(reflectionCorrections);
                               newMap.set(source.id, e.target.checked);
-                              setReflectionCorrections(newMap);
+                              onReflectionCorrectionsChange(newMap);
                             }}
                             className="w-4 h-4 text-blue-600 rounded focus:ring-2 focus:ring-blue-500"
                           />
