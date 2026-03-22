@@ -46,7 +46,7 @@ export default function Home() {
       description: 'Analýza hluku ze stacionárních zdrojů',
       icon: '🏭',
       color: 'from-orange-500 to-orange-600',
-      available: false,
+      available: true,
     },
     {
       id: 'pracovni-prostredi-hluk',
