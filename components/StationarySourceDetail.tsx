@@ -16,6 +16,7 @@ import {
   Tooltip,
   Legend,
 } from 'chart.js';
+import ChartDataLabels from 'chartjs-plugin-datalabels';
 import * as XLSX from 'xlsx';
 import { formatNumber } from '@/lib/format';
 
@@ -29,7 +30,8 @@ ChartJS.register(
   BarController,
   Title,
   Tooltip,
-  Legend
+  Legend,
+  ChartDataLabels
 );
 
 interface StationarySourceDetailProps {
@@ -119,13 +121,29 @@ export function StationarySourceDetail({ source, allSources, onClose }: Stationa
       padding: {
         left: 10,
         right: 30,
-        top: 10,
+        top: 40,
         bottom: 10,
       }
     },
     plugins: {
       legend: {
         position: 'top' as const,
+        labels: {
+          usePointStyle: true,
+          pointStyle: 'line' as const,
+          generateLabels: function(chart: any) {
+            const datasets = chart.data.datasets;
+            return datasets.map((dataset: any, i: number) => ({
+              text: dataset.label,
+              fillStyle: dataset.type === 'line' ? dataset.borderColor : dataset.backgroundColor,
+              strokeStyle: dataset.borderColor,
+              lineWidth: dataset.type === 'line' ? 2 : 0,
+              hidden: !chart.isDatasetVisible(i),
+              index: i,
+              pointStyle: dataset.type === 'line' ? 'line' : 'rect',
+            }));
+          }
+        }
       },
       title: {
         display: true,
@@ -147,6 +165,29 @@ export function StationarySourceDetail({ source, allSources, onClose }: Stationa
             }
             return label;
           }
+        }
+      },
+      datalabels: {
+        display: function(context: any) {
+          // Show labels only for source dataset (first bar dataset)
+          return context.datasetIndex === 0 && context.dataset.type !== 'line';
+        },
+        anchor: 'end' as const,
+        align: 'top' as const,
+        offset: 4,
+        font: {
+          size: 10,
+          weight: 'bold' as const,
+        },
+        color: function(context: any) {
+          // Red for tonal components, dark blue for normal
+          if (source.tonalComponents && source.tonalComponents[context.dataIndex]) {
+            return 'rgba(220, 38, 38, 1)';
+          }
+          return 'rgba(29, 78, 216, 1)';
+        },
+        formatter: function(value: number) {
+          return value.toFixed(1);
         }
       }
     },
