@@ -42,7 +42,7 @@ export default function StacionarniZdroje() {
 
     const timestamp = new Date().getTime();
     const newSource: StationarySource = {
-      id: \`source-\${timestamp}\`,
+      id: `source-${timestamp}`,
       name: defaultName,
       type,
       startTime,
