@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { StationaryFileUpload } from '@/components/StationaryFileUpload';
 import { StationaryChart } from '@/components/StationaryChart';
 import { StationarySourceTable } from '@/components/StationarySourceTable';
+import { StationaryCalculations } from '@/components/StationaryCalculations';
 import { SourceTypeDialog } from '@/components/SourceTypeDialog';
 import { StationaryData, StationaryDataPoint, StationarySource, STATIONARY_FREQUENCY_LIST } from '@/types/stationary';
 import { calculateStationaryStats, detectTonalComponents } from '@/lib/stationaryCalculations';
@@ -22,6 +23,7 @@ export default function StacionarniZdroje() {
     points: StationaryDataPoint[];
   } | null>(null);
   const [savedProjects, setSavedProjects] = useState<any[]>([]);
+  const [activeTab, setActiveTab] = useState<'sources' | 'calculations'>('sources');
 
   // Load from localStorage on mount
   useEffect(() => {
@@ -460,12 +462,38 @@ export default function StacionarniZdroje() {
               />
             </div>
 
-            <div className="bg-white rounded-lg shadow-sm p-6">
-              <StationarySourceTable
-                sources={sources}
-                onUpdateSource={handleUpdateSource}
-                onDeleteSource={handleDeleteSource}
-              />
+            {/* Tabs */}
+            <div className="bg-white rounded-lg shadow-sm">
+              <div className="border-b border-gray-200">
+                <nav className="flex -mb-px">
+                  <TabButton
+                    active={activeTab === 'sources'}
+                    onClick={() => setActiveTab('sources')}
+                    label="📋 Seznam zdrojů"
+                  />
+                  <TabButton
+                    active={activeTab === 'calculations'}
+                    onClick={() => setActiveTab('calculations')}
+                    label="📊 Dopočet"
+                  />
+                </nav>
+              </div>
+
+              <div className="p-6">
+                {activeTab === 'sources' && (
+                  <StationarySourceTable
+                    sources={sources}
+                    onUpdateSource={handleUpdateSource}
+                    onDeleteSource={handleDeleteSource}
+                  />
+                )}
+                {activeTab === 'calculations' && (
+                  <StationaryCalculations
+                    sources={sources}
+                    allSources={sources}
+                  />
+                )}
+              </div>
             </div>
           </div>
         )}
@@ -488,5 +516,28 @@ export default function StacionarniZdroje() {
         />
       )}
     </div>
+  );
+}
+
+function TabButton({
+  active,
+  onClick,
+  label,
+}: {
+  active: boolean;
+  onClick: () => void;
+  label: string;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      className={`px-6 py-3 font-medium text-sm border-b-2 transition-colors ${
+        active
+          ? 'border-orange-600 text-orange-600'
+          : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+      }`}
+    >
+      {label}
+    </button>
   );
 }
