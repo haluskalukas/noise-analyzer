@@ -244,6 +244,58 @@ export function VibrationChart({ data, onTrainSelection }: VibrationChartProps) 
 
       ctx.fillRect(x1, y1, x2 - x1, y2 - y1);
       ctx.strokeRect(x1, y1, x2 - x1, y2 - y1);
+
+      // Calculate selected time range
+      const chartWidth = width - margin.left - margin.right;
+      const relativeX1 = Math.max(0, x1 - margin.left);
+      const relativeX2 = Math.max(0, x2 - margin.left);
+
+      const index1 = Math.round((relativeX1 / chartWidth) * (visibleData.length - 1));
+      const index2 = Math.round((relativeX2 / chartWidth) * (visibleData.length - 1));
+
+      const validIndex1 = Math.max(0, Math.min(index1, visibleData.length - 1));
+      const validIndex2 = Math.max(0, Math.min(index2, visibleData.length - 1));
+
+      if (visibleData[validIndex1] && visibleData[validIndex2]) {
+        const startTime = format(visibleData[validIndex1].datetime, 'HH:mm:ss');
+        const endTime = format(visibleData[validIndex2].datetime, 'HH:mm:ss');
+
+        // Draw start time label
+        ctx.fillStyle = 'rgba(59, 130, 246, 0.95)';
+        ctx.strokeStyle = '#2563eb';
+        ctx.lineWidth = 2;
+
+        ctx.font = 'bold 12px sans-serif';
+        const startTextWidth = ctx.measureText(startTime).width;
+        const startLabelX = x1 - 5;
+        const startLabelY = y1 - 10;
+
+        ctx.beginPath();
+        ctx.roundRect(startLabelX - startTextWidth - 8, startLabelY - 18, startTextWidth + 16, 24, 4);
+        ctx.fill();
+        ctx.stroke();
+
+        ctx.fillStyle = '#ffffff';
+        ctx.textAlign = 'center';
+        ctx.fillText(startTime, startLabelX - startTextWidth / 2, startLabelY - 2);
+
+        // Draw end time label
+        ctx.fillStyle = 'rgba(59, 130, 246, 0.95)';
+        ctx.strokeStyle = '#2563eb';
+
+        const endTextWidth = ctx.measureText(endTime).width;
+        const endLabelX = x2 + 5;
+        const endLabelY = y1 - 10;
+
+        ctx.beginPath();
+        ctx.roundRect(endLabelX - 8, endLabelY - 18, endTextWidth + 16, 24, 4);
+        ctx.fill();
+        ctx.stroke();
+
+        ctx.fillStyle = '#ffffff';
+        ctx.textAlign = 'center';
+        ctx.fillText(endTime, endLabelX + endTextWidth / 2, endLabelY - 2);
+      }
     }
 
     // Draw axis labels

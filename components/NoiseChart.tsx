@@ -1,5 +1,6 @@
 'use client';
 import { formatNumber } from '@/lib/format';
+import { format } from 'date-fns';
 
 import { useMemo, useState, useRef, useEffect } from 'react';
 import { NoiseDataPoint, TimeFilter } from '@/types';
@@ -433,6 +434,60 @@ export function NoiseChart({ data, filter, showAverage = true, deletedIndices, o
         ctx.fillRect(x1, margin.top, selectionWidth, chartHeight);
         ctx.strokeRect(x1, margin.top, selectionWidth, chartHeight);
         ctx.setLineDash([]);
+
+        // Calculate selected time range
+        const relativeX1 = Math.max(0, x1 - margin.left);
+        const relativeX2 = Math.max(0, x2 - margin.left);
+
+        const index1 = Math.round((relativeX1 / chartWidth) * (visibleData.length - 1));
+        const index2 = Math.round((relativeX2 / chartWidth) * (visibleData.length - 1));
+
+        const validIndex1 = Math.max(0, Math.min(index1, visibleData.length - 1));
+        const validIndex2 = Math.max(0, Math.min(index2, visibleData.length - 1));
+
+        if (visibleData[validIndex1] && visibleData[validIndex2]) {
+          const startTime = format(visibleData[validIndex1].datetime, 'HH:mm:ss');
+          const endTime = format(visibleData[validIndex2].datetime, 'HH:mm:ss');
+
+          const labelColor = dragMode === 'delete' ? '#ef4444' : '#3b82f6';
+          const labelBgColor = dragMode === 'delete' ? 'rgba(239, 68, 68, 0.95)' : 'rgba(59, 130, 246, 0.95)';
+
+          // Draw start time label
+          ctx.fillStyle = labelBgColor;
+          ctx.strokeStyle = labelColor;
+          ctx.lineWidth = 2;
+
+          ctx.font = 'bold 12px sans-serif';
+          const startTextWidth = ctx.measureText(startTime).width;
+          const startLabelX = x1 - 5;
+          const startLabelY = margin.top - 10;
+
+          ctx.beginPath();
+          ctx.roundRect(startLabelX - startTextWidth - 8, startLabelY - 18, startTextWidth + 16, 24, 4);
+          ctx.fill();
+          ctx.stroke();
+
+          ctx.fillStyle = '#ffffff';
+          ctx.textAlign = 'center';
+          ctx.fillText(startTime, startLabelX - startTextWidth / 2, startLabelY - 2);
+
+          // Draw end time label
+          ctx.fillStyle = labelBgColor;
+          ctx.strokeStyle = labelColor;
+
+          const endTextWidth = ctx.measureText(endTime).width;
+          const endLabelX = x2 + 5;
+          const endLabelY = margin.top - 10;
+
+          ctx.beginPath();
+          ctx.roundRect(endLabelX - 8, endLabelY - 18, endTextWidth + 16, 24, 4);
+          ctx.fill();
+          ctx.stroke();
+
+          ctx.fillStyle = '#ffffff';
+          ctx.textAlign = 'center';
+          ctx.fillText(endTime, endLabelX + endTextWidth / 2, endLabelY - 2);
+        }
       }
     }
 

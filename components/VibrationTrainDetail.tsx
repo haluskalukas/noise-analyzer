@@ -234,10 +234,10 @@ export function VibrationTrainDetail({ train, onClose }: VibrationTrainDetailPro
                         {freq}
                       </th>
                     ))}
-                    <th className="px-4 py-3 text-center text-xs font-bold text-gray-700 uppercase border-r bg-blue-50">
+                    <th className="px-4 py-3 text-center text-xs font-bold text-gray-700 border-r bg-blue-50">
                       L<sub>aw</sub><br/>(dB)
                     </th>
-                    <th className="px-4 py-3 text-center text-xs font-bold text-gray-700 uppercase bg-gray-200">
+                    <th className="px-4 py-3 text-center text-xs font-bold text-gray-700 bg-gray-200">
                       Limit<br/>(dB)
                     </th>
                   </tr>
