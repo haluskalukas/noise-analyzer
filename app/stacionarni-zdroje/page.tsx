@@ -423,21 +423,6 @@ export default function StacionarniZdroje() {
               </div>
             )}
 
-            <div className="mt-6 bg-blue-50 border border-blue-200 rounded-lg p-6">
-              <h3 className="text-sm font-medium text-blue-900 mb-2 flex items-center gap-2">
-                💡 Jak používat tento modul
-              </h3>
-              <div className="text-xs text-blue-800 space-y-2">
-                <p>1. Nahraj Excel soubor s měřeními (datum, čas, LAeq, 31 frekvencí 20 Hz - 20 kHz)</p>
-                <p>2. V grafu pomocí <strong>Alt + tažení myší</strong> vyber interval pro ZDROJ HLUKU</p>
-                <p>3. Znovu vyber interval pro HLUK POZADÍ (druhý výběr)</p>
-                <p>4. Automaticky se vypočítá LAeq, percentily a frekvenční spektrum</p>
-                <p>5. Do tabulky můžeš upravit názvy měření</p>
-                <p>6. V detailu uvidíš sloupcový graf se srovnáním zdroje a pozadí</p>
-                <p>7. Exportuj výsledky do Excelu nebo graf jako PNG</p>
-              </div>
-            </div>
-
           </div>
         ) : (
           <div className="space-y-6">

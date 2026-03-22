@@ -44,12 +44,13 @@ export function StationaryConclusion({ sources, allSources, reflectionCorrection
   };
 
   // Calculate final level for each source
-  const calculateFinalLevel = (source: StationarySource): { finalLevel: number, uncertainty: number, hasTonal: boolean, backgroundCorrected: boolean } => {
+  const calculateFinalLevel = (source: StationarySource): { finalLevel: number, uncertainty: number, hasTonal: boolean, difference: number } => {
     const background = getBackgroundForSource(source);
     if (!background) {
-      return { finalLevel: source.laeq, uncertainty: 1.7, hasTonal: false, backgroundCorrected: false };
+      return { finalLevel: source.laeq, uncertainty: 1.7, hasTonal: false, difference: 999 }; // No background = no difference
     }
 
+    const difference = source.laeq - background.laeq;
     const bgCorrection = calculateBackgroundCorrection(source.laeq, background.laeq);
     const reflectionCorrection = reflectionCorrections.get(source.id) ? -2.0 : 0.0;
     const finalLevel = source.laeq + bgCorrection + reflectionCorrection;
@@ -58,7 +59,7 @@ export function StationaryConclusion({ sources, allSources, reflectionCorrection
     const uncertainty = bgCorrection !== 0 ? 1.8 : 1.7;
     const hasTonal = hasTonalComponents(source);
 
-    return { finalLevel, uncertainty, hasTonal, backgroundCorrected: bgCorrection !== 0 };
+    return { finalLevel, uncertainty, hasTonal, difference };
   };
 
   const sourcesWithCalcs = useMemo(() => {
@@ -81,7 +82,7 @@ export function StationaryConclusion({ sources, allSources, reflectionCorrection
     data.push(['']);
 
     sourcesWithCalcs.forEach((item, index) => {
-      const { source, finalLevel, uncertainty, hasTonal, finalWithUncertainty, backgroundCorrected } = item;
+      const { source, finalLevel, uncertainty, hasTonal, finalWithUncertainty, difference } = item;
       const dayLimit = hasTonal ? 45 : 50;
       const nightLimit = hasTonal ? 35 : 40;
 
@@ -92,27 +93,35 @@ export function StationaryConclusion({ sources, allSources, reflectionCorrection
 
       // Day table
       data.push(['DENNÍ DOBA']);
-      data.push(['druh chráněného prostoru', 'CHVePS (chráněný venkovní prostor)']);
+      data.push(['druh chráněného prostoru', 'CHVePS']);
       data.push(['', 'stanovený hygienický limit']);
       data.push(['denní doba', formatNumber(dayLimit)]);
       data.push(['']);
 
-      // Determine correction text
-      const correctionText = backgroundCorrected
-        ? 'výsledná dopadající hladina, korigována na zbytkový hluk'
-        : 'výsledná dopadající hladina, včetně zbytkového hluku';
+      // Determine correction text based on difference
+      let correctionText;
+      if (difference < 3) {
+        correctionText = 'výsledná dopadající hladina, včetně zbytkového hluku';
+      } else if (difference >= 3 && difference < 10) {
+        correctionText = 'výsledná dopadající hladina, korigována na zbytkový hluk';
+      } else {
+        correctionText = 'výsledná dopadající hladina, nekorigována na zbytkový hluk';
+      }
       data.push([`${correctionText}, stanovena pro referenční časový interval LAeq,8/1 hod`, formatNumber(finalLevel)]);
       data.push(['']);
       data.push(['kombinovaná rozšířená nejistota měření (dB)', formatNumber(uncertainty)]);
       data.push(['']);
       data.push(['výsledná hodnota hladiny hluku po odečtení nejistoty měření, stanovena pro dobu provozu zdroje hluku LAeq,8/1 hod (dB)', formatNumber(finalWithUncertainty)]);
       data.push(['']);
-      data.push(['Hygienický limit je prokázatelně překročen', finalWithUncertainty > dayLimit ? 'ANO' : 'NE']);
+      const dayConclusion = finalWithUncertainty > dayLimit
+        ? 'Hygienický limit je prokázatelně překročen'
+        : 'Hygienický limit není prokázatelně překročen';
+      data.push([dayConclusion]);
       data.push(['']);
 
       // Night table
       data.push(['NOČNÍ DOBA']);
-      data.push(['druh chráněného prostoru', 'CHVePS (chráněný venkovní prostor)']);
+      data.push(['druh chráněného prostoru', 'CHVePS']);
       data.push(['', 'stanovený hygienický limit']);
       data.push(['noční doba', formatNumber(nightLimit)]);
       data.push(['']);
@@ -122,7 +131,10 @@ export function StationaryConclusion({ sources, allSources, reflectionCorrection
       data.push(['']);
       data.push(['výsledná hodnota hladiny hluku po odečtení nejistoty měření, stanovena pro dobu provozu zdroje hluku LAeq,8/1 hod (dB)', formatNumber(finalWithUncertainty)]);
       data.push(['']);
-      data.push(['Hygienický limit je prokázatelně překročen', finalWithUncertainty > nightLimit ? 'ANO' : 'NE']);
+      const nightConclusion = finalWithUncertainty > nightLimit
+        ? 'Hygienický limit je prokázatelně překročen'
+        : 'Hygienický limit není prokázatelně překročen';
+      data.push([nightConclusion]);
     });
 
     const ws = XLSX.utils.aoa_to_sheet(data);
@@ -154,16 +166,21 @@ export function StationaryConclusion({ sources, allSources, reflectionCorrection
         </button>
       </div>
 
-      {sourcesWithCalcs.map(({ source, finalLevel, uncertainty, hasTonal, finalWithUncertainty, backgroundCorrected }) => {
+      {sourcesWithCalcs.map(({ source, finalLevel, uncertainty, hasTonal, finalWithUncertainty, difference }) => {
         const dayLimit = hasTonal ? 45 : 50;
         const nightLimit = hasTonal ? 35 : 40;
         const dayExceeded = finalWithUncertainty > dayLimit;
         const nightExceeded = finalWithUncertainty > nightLimit;
 
-        // Determine correction text
-        const correctionText = backgroundCorrected
-          ? 'výsledná dopadající hladina, korigována na zbytkový hluk'
-          : 'výsledná dopadající hladina, včetně zbytkového hluku';
+        // Determine correction text based on difference
+        let correctionText;
+        if (difference < 3) {
+          correctionText = 'výsledná dopadající hladina, včetně zbytkového hluku';
+        } else if (difference >= 3 && difference < 10) {
+          correctionText = 'výsledná dopadající hladina, korigována na zbytkový hluk';
+        } else {
+          correctionText = 'výsledná dopadající hladina, nekorigována na zbytkový hluk';
+        }
 
         return (
           <div key={source.id} className="space-y-4">
@@ -188,11 +205,6 @@ export function StationaryConclusion({ sources, allSources, reflectionCorrection
                       </td>
                       <td className="px-4 py-3 text-xs text-gray-900 text-right">
                         CHVePS
-                      </td>
-                    </tr>
-                    <tr className="bg-gray-50">
-                      <td className="px-4 py-3 text-xs italic text-gray-600" colSpan={2}>
-                        (chráněný venkovní prostor)
                       </td>
                     </tr>
                     <tr className="bg-blue-50">
@@ -240,7 +252,7 @@ export function StationaryConclusion({ sources, allSources, reflectionCorrection
                     </tr>
                     <tr className={dayExceeded ? 'bg-red-100' : 'bg-green-100'}>
                       <td className={`px-4 py-3 text-sm font-bold text-center ${dayExceeded ? 'text-red-900' : 'text-green-900'}`} colSpan={2}>
-                        Hygienický limit {dayExceeded ? 'je' : 'není'} prokázatelně překročen: {dayExceeded ? 'ANO ❌' : 'NE ✅'}
+                        Hygienický limit {dayExceeded ? 'je' : 'není'} prokázatelně překročen
                       </td>
                     </tr>
                   </tbody>
@@ -260,11 +272,6 @@ export function StationaryConclusion({ sources, allSources, reflectionCorrection
                       </td>
                       <td className="px-4 py-3 text-xs text-gray-900 text-right">
                         CHVePS
-                      </td>
-                    </tr>
-                    <tr className="bg-gray-50">
-                      <td className="px-4 py-3 text-xs italic text-gray-600" colSpan={2}>
-                        (chráněný venkovní prostor)
                       </td>
                     </tr>
                     <tr className="bg-blue-50">
@@ -312,7 +319,7 @@ export function StationaryConclusion({ sources, allSources, reflectionCorrection
                     </tr>
                     <tr className={nightExceeded ? 'bg-red-100' : 'bg-green-100'}>
                       <td className={`px-4 py-3 text-sm font-bold text-center ${nightExceeded ? 'text-red-900' : 'text-green-900'}`} colSpan={2}>
-                        Hygienický limit {nightExceeded ? 'je' : 'není'} prokázatelně překročen: {nightExceeded ? 'ANO ❌' : 'NE ✅'}
+                        Hygienický limit {nightExceeded ? 'je' : 'není'} prokázatelně překročen
                       </td>
                     </tr>
                   </tbody>
