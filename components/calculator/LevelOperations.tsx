@@ -87,7 +87,7 @@ export function LevelOperations() {
           <span className="text-3xl">➖</span>
           <div>
             <h3 className="text-xl font-bold text-orange-900">Logaritmický odečet hladin</h3>
-            <p className="text-sm text-orange-700">Korekce na zbytkový hluk (pozadí)</p>
+            <p className="text-sm text-orange-700">Odečtení hladin zvuku</p>
           </div>
         </div>
 
@@ -133,29 +133,9 @@ export function LevelOperations() {
           ))}
         </div>
 
-        <div className="space-y-3">
-          <div className="bg-orange-900 text-white rounded-lg p-4 text-center">
-            <div className="text-sm font-medium mb-1">Výsledná hladina</div>
-            <div className="text-3xl font-bold">{formatResult(diffResult.result, 1)} dB</div>
-          </div>
-
-          <div className="bg-white rounded-lg p-4 border-2 border-orange-300">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-sm font-medium text-gray-700">Rozdíl:</span>
-              <span className="text-lg font-bold text-orange-900">{formatResult(diffResult.difference, 1)} dB</span>
-            </div>
-            <div className="text-sm text-gray-600">
-              {diffResult.status === 'cannot_distinguish' && (
-                <span className="text-red-600 font-medium">⚠️ Nelze odlišit od pozadí (&lt; 3 dB)</span>
-              )}
-              {diffResult.status === 'corrected' && (
-                <span className="text-yellow-600 font-medium">✓ Korigováno na pozadí (3-10 dB)</span>
-              )}
-              {diffResult.status === 'no_correction' && (
-                <span className="text-green-600 font-medium">✓ Korekce není potřeba (&gt; 10 dB)</span>
-              )}
-            </div>
-          </div>
+        <div className="bg-orange-900 text-white rounded-lg p-4 text-center">
+          <div className="text-sm font-medium mb-1">Výsledná hladina</div>
+          <div className="text-3xl font-bold">{formatResult(diffResult.result, 1)} dB</div>
         </div>
       </div>
 
