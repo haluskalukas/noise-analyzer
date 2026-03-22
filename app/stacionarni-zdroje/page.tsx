@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { StationaryFileUpload } from '@/components/StationaryFileUpload';
 import { StationaryChart } from '@/components/StationaryChart';
 import { StationarySourceTable } from '@/components/StationarySourceTable';
+import { SourceTypeDialog } from '@/components/SourceTypeDialog';
 import { StationaryData, StationaryDataPoint, StationarySource } from '@/types/stationary';
 import { calculateStationaryStats } from '@/lib/stationaryCalculations';
 import { format } from 'date-fns';
@@ -13,6 +14,11 @@ import { cs } from 'date-fns/locale';
 export default function StacionarniZdroje() {
   const [stationaryData, setStationaryData] = useState<StationaryData | null>(null);
   const [sources, setSources] = useState<StationarySource[]>([]);
+  const [pendingSelection, setPendingSelection] = useState<{
+    startIdx: number;
+    endIdx: number;
+    points: StationaryDataPoint[];
+  } | null>(null);
 
   const handleDataLoaded = (data: StationaryData) => {
     setStationaryData(data);
@@ -27,6 +33,20 @@ export default function StacionarniZdroje() {
   const handleAddSource = (startIdx: number, endIdx: number, points: StationaryDataPoint[]) => {
     if (!stationaryData) return;
 
+    const hasBackground = sources.some(s => s.type === 'background');
+
+    // If already has background, automatically add as source
+    if (hasBackground) {
+      handleConfirmSourceType('source', startIdx, endIdx, points);
+    } else {
+      // Show dialog to ask user
+      setPendingSelection({ startIdx, endIdx, points });
+    }
+  };
+
+  const handleConfirmSourceType = (type: 'source' | 'background', startIdx: number, endIdx: number, points: StationaryDataPoint[]) => {
+    if (!stationaryData) return;
+
     const selectedPoints = points.slice(startIdx, endIdx + 1);
     if (selectedPoints.length === 0) return;
 
@@ -35,28 +55,8 @@ export default function StacionarniZdroje() {
     const startTime = selectedPoints[0].datetime;
     const endTime = selectedPoints[selectedPoints.length - 1].datetime;
 
-    const hasBackground = sources.some(s => s.type === 'background');
     const sourceCount = sources.filter(s => s.type === 'source').length;
-
-    // Determine type: if no background yet, ask user. Otherwise, it's a source.
-    let type: 'source' | 'background';
-    let defaultName: string;
-
-    if (!hasBackground && sourceCount === 0) {
-      // First selection - ask user
-      const isBackground = window.confirm('Je toto měření HLUKU POZADÍ?\n\nOK = Ano (Hluk pozadí)\nZrušit = Ne (Zdroj hluku)');
-      type = isBackground ? 'background' : 'source';
-      defaultName = type === 'background' ? 'Hluk pozadí' : 'Zdroj hluku 1';
-    } else if (!hasBackground) {
-      // Have sources but no background - ask if this is background
-      const isBackground = window.confirm('Je toto měření HLUKU POZADÍ?\n\nOK = Ano (Hluk pozadí)\nZrušit = Ne (další Zdroj hluku)');
-      type = isBackground ? 'background' : 'source';
-      defaultName = type === 'background' ? 'Hluk pozadí' : `Zdroj hluku ${sourceCount + 1}`;
-    } else {
-      // Already have background - this must be a source
-      type = 'source';
-      defaultName = `Zdroj hluku ${sourceCount + 1}`;
-    }
+    const defaultName = type === 'background' ? 'Hluk pozadí' : `Zdroj hluku ${sourceCount + 1}`;
 
     const timestamp = new Date().getTime();
     const newSource: StationarySource = {
@@ -79,6 +79,7 @@ export default function StacionarniZdroje() {
     };
 
     setSources(prev => [...prev, newSource]);
+    setPendingSelection(null);
   };
 
   const handleUpdateSource = (id: string, field: keyof StationarySource, value: string) => {
@@ -189,6 +190,19 @@ export default function StacionarniZdroje() {
       <footer className="mt-12 py-6 text-center text-sm text-gray-500">
         <p>Stacionární zdroje hluku • Vytvořeno s Next.js a TypeScript</p>
       </footer>
+
+      {/* Source Type Dialog */}
+      {pendingSelection && (
+        <SourceTypeDialog
+          onSelect={(type) => handleConfirmSourceType(
+            type,
+            pendingSelection.startIdx,
+            pendingSelection.endIdx,
+            pendingSelection.points
+          )}
+          hasBackground={sources.some(s => s.type === 'background')}
+        />
+      )}
     </div>
   );
 }

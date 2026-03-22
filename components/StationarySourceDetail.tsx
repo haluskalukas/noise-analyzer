@@ -41,30 +41,30 @@ export function StationarySourceDetail({ source, allSources, onClose }: Stationa
   const datasets = [];
 
   if (isSource) {
-    // If this is source, show source (orange) + background (green)
+    // If this is source, show source (dark blue) + background (light blue)
     datasets.push({
       label: source.name || 'Zdroj hluku',
       data: source.avgFrequencies,
-      backgroundColor: 'rgba(249, 115, 22, 0.8)',
-      borderColor: 'rgba(234, 88, 12, 1)',
+      backgroundColor: 'rgba(37, 99, 235, 0.8)',
+      borderColor: 'rgba(29, 78, 216, 1)',
       borderWidth: 2,
     });
     if (background) {
       datasets.push({
         label: background.name || 'Hluk pozadí',
         data: background.avgFrequencies,
-        backgroundColor: 'rgba(34, 197, 94, 0.8)',
-        borderColor: 'rgba(22, 163, 74, 1)',
+        backgroundColor: 'rgba(147, 197, 253, 0.8)',
+        borderColor: 'rgba(96, 165, 250, 1)',
         borderWidth: 2,
       });
     }
   } else {
-    // If this is background, show ONLY background (green)
+    // If this is background, show ONLY background (light blue)
     datasets.push({
       label: source.name || 'Hluk pozadí',
       data: source.avgFrequencies,
-      backgroundColor: 'rgba(34, 197, 94, 0.8)',
-      borderColor: 'rgba(22, 163, 74, 1)',
+      backgroundColor: 'rgba(147, 197, 253, 0.8)',
+      borderColor: 'rgba(96, 165, 250, 1)',
       borderWidth: 2,
     });
   }
@@ -238,76 +238,6 @@ export function StationarySourceDetail({ source, allSources, onClose }: Stationa
           <div className="bg-white border-2 border-gray-200 rounded-xl p-4">
             <div style={{ height: '400px' }}>
               <Bar ref={chartRef} data={chartData} options={chartOptions} />
-            </div>
-          </div>
-
-          {/* Statistics Table */}
-          <div className="bg-white border-2 border-gray-200 rounded-xl overflow-hidden">
-            <div className="bg-gray-50 p-4 border-b">
-              <h3 className="font-bold text-gray-900">
-                Statistiky měření
-              </h3>
-            </div>
-            <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-gray-200 text-sm">
-                <thead className="bg-gray-100">
-                  <tr>
-                    <th className="px-4 py-3 text-left text-xs font-bold text-gray-700 uppercase border-r">
-                      Parametr
-                    </th>
-                    <th className={`px-4 py-3 text-center text-xs font-bold text-gray-700 border-r ${isSource ? 'bg-orange-50' : 'bg-green-50'}`}>
-                      {source.name || (isSource ? 'Zdroj hluku' : 'Hluk pozadí')}
-                    </th>
-                    {isSource && background && (
-                      <th className="px-4 py-3 text-center text-xs font-bold text-gray-700 bg-green-50">
-                        {background.name || 'Hluk pozadí'}
-                      </th>
-                    )}
-                  </tr>
-                </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
-                  <tr className="hover:bg-gray-50">
-                    <td className="px-4 py-3 font-bold text-gray-900 bg-gray-50 border-r">LAeq (dB)</td>
-                    <td className="px-4 py-3 text-center font-bold border-r">{formatNumber(source.laeq)}</td>
-                    {isSource && background && <td className="px-4 py-3 text-center font-bold">{formatNumber(background.laeq)}</td>}
-                  </tr>
-                  <tr className="hover:bg-gray-50">
-                    <td className="px-4 py-3 font-bold text-gray-900 bg-gray-50 border-r">L5 (dB)</td>
-                    <td className="px-4 py-3 text-center border-r">{formatNumber(source.l5)}</td>
-                    {isSource && background && <td className="px-4 py-3 text-center">{formatNumber(background.l5)}</td>}
-                  </tr>
-                  <tr className="hover:bg-gray-50">
-                    <td className="px-4 py-3 font-bold text-gray-900 bg-gray-50 border-r">L10 (dB)</td>
-                    <td className="px-4 py-3 text-center border-r">{formatNumber(source.l10)}</td>
-                    {isSource && background && <td className="px-4 py-3 text-center">{formatNumber(background.l10)}</td>}
-                  </tr>
-                  <tr className="hover:bg-gray-50">
-                    <td className="px-4 py-3 font-bold text-gray-900 bg-gray-50 border-r">L50 (dB)</td>
-                    <td className="px-4 py-3 text-center border-r">{formatNumber(source.l50)}</td>
-                    {isSource && background && <td className="px-4 py-3 text-center">{formatNumber(background.l50)}</td>}
-                  </tr>
-                  <tr className="hover:bg-gray-50">
-                    <td className="px-4 py-3 font-bold text-gray-900 bg-gray-50 border-r">L90 (dB)</td>
-                    <td className="px-4 py-3 text-center border-r">{formatNumber(source.l90)}</td>
-                    {isSource && background && <td className="px-4 py-3 text-center">{formatNumber(background.l90)}</td>}
-                  </tr>
-                  <tr className="hover:bg-gray-50">
-                    <td className="px-4 py-3 font-bold text-gray-900 bg-gray-50 border-r">L95 (dB)</td>
-                    <td className="px-4 py-3 text-center border-r">{formatNumber(source.l95)}</td>
-                    {isSource && background && <td className="px-4 py-3 text-center">{formatNumber(background.l95)}</td>}
-                  </tr>
-                  <tr className="hover:bg-gray-50">
-                    <td className="px-4 py-3 font-bold text-gray-900 bg-gray-50 border-r">Min (dB)</td>
-                    <td className="px-4 py-3 text-center border-r">{formatNumber(source.min)}</td>
-                    {isSource && background && <td className="px-4 py-3 text-center">{formatNumber(background.min)}</td>}
-                  </tr>
-                  <tr className="hover:bg-gray-50">
-                    <td className="px-4 py-3 font-bold text-gray-900 bg-gray-50 border-r">Max (dB)</td>
-                    <td className="px-4 py-3 text-center border-r">{formatNumber(source.max)}</td>
-                    {isSource && background && <td className="px-4 py-3 text-center">{formatNumber(background.max)}</td>}
-                  </tr>
-                </tbody>
-              </table>
             </div>
           </div>
 
