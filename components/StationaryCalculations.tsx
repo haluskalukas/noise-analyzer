@@ -37,7 +37,7 @@ export function StationaryCalculations({ sources, allSources }: StationaryCalcul
       if (correctedPower <= 0) return 0;
 
       const correctedLevel = 10 * Math.log10(correctedPower);
-      return sourceLevel - correctedLevel; // Return the correction value (negative)
+      return correctedLevel - sourceLevel; // Return the correction value (negative, it's a subtraction)
     } else {
       return 0; // No correction needed
     }
