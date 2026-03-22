@@ -1,4 +1,4 @@
-import { StationaryDataPoint } from '@/types/stationary';
+import { StationaryDataPoint, HEARING_THRESHOLD } from '@/types/stationary';
 
 /**
  * Calculate logarithmic average (Leq) from dB values
@@ -38,6 +38,40 @@ export function calculateFrequencyAverages(points: StationaryDataPoint[]): numbe
   }
 
   return avgFrequencies;
+}
+
+/**
+ * Detect tonal components in frequency spectrum
+ * Tonal component: frequency band >5 dB higher than both neighbors
+ * AND (for 10-160 Hz) level higher than hearing threshold
+ */
+export function detectTonalComponents(avgFrequencies: number[], frequencyList: number[]): boolean[] {
+  const tonalComponents = Array(avgFrequencies.length).fill(false);
+
+  for (let i = 1; i < avgFrequencies.length - 1; i++) {
+    const current = avgFrequencies[i];
+    const prev = avgFrequencies[i - 1];
+    const next = avgFrequencies[i + 1];
+    const freq = frequencyList[i];
+
+    // Check if >5 dB higher than both neighbors
+    const higherThanNeighbors = current > prev + 5 && current > next + 5;
+
+    if (higherThanNeighbors) {
+      // For frequencies 10-160 Hz, also check hearing threshold
+      if (freq >= 10 && freq <= 160) {
+        const threshold = HEARING_THRESHOLD[freq];
+        if (threshold !== undefined && current > threshold) {
+          tonalComponents[i] = true;
+        }
+      } else {
+        // For other frequencies, just the neighbor check is enough
+        tonalComponents[i] = true;
+      }
+    }
+  }
+
+  return tonalComponents;
 }
 
 /**

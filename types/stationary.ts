@@ -29,6 +29,7 @@ export interface StationarySource {
   max: number;
   // Average frequencies (logarithmic average for each frequency)
   avgFrequencies: number[]; // 31 frequencies
+  tonalComponents?: boolean[]; // 31 flags for tonal components
   startIndex: number;
   endIndex: number;
 }
@@ -40,3 +41,17 @@ export const STATIONARY_FREQUENCY_LIST = [
   2000, 2500, 3150, 4000, 5000, 6300, 8000, 10000, 12500, 16000,
   20000
 ];
+
+// Hearing threshold values for frequencies 20-160 Hz (dB)
+export const HEARING_THRESHOLD: Record<number, number> = {
+  20: 74,
+  25: 64,
+  31.5: 56,
+  40: 49,
+  50: 43,
+  63: 42,
+  80: 40,
+  100: 38,
+  125: 36,
+  160: 34,
+};

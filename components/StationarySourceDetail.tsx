@@ -1,7 +1,7 @@
 'use client';
 
 import { useRef } from 'react';
-import { StationarySource, STATIONARY_FREQUENCY_LIST } from '@/types/stationary';
+import { StationarySource, STATIONARY_FREQUENCY_LIST, HEARING_THRESHOLD } from '@/types/stationary';
 import { Bar } from 'react-chartjs-2';
 import {
   Chart as ChartJS,
@@ -37,16 +37,28 @@ export function StationarySourceDetail({ source, allSources, onClose }: Stationa
   const isSource = source.type === 'source';
   const background = allSources.find(s => s.type === 'background');
 
-  // Prepare chart data
+  // Prepare chart data with tonal components highlighted in red
   const datasets = [];
 
+  // Prepare colors for source based on tonal components
+  const sourceBackgroundColors = source.avgFrequencies.map((_, i) =>
+    source.tonalComponents && source.tonalComponents[i]
+      ? 'rgba(239, 68, 68, 0.8)' // red for tonal
+      : 'rgba(37, 99, 235, 0.8)' // blue for normal
+  );
+  const sourceBorderColors = source.avgFrequencies.map((_, i) =>
+    source.tonalComponents && source.tonalComponents[i]
+      ? 'rgba(220, 38, 38, 1)' // red border
+      : 'rgba(29, 78, 216, 1)' // blue border
+  );
+
   if (isSource) {
-    // If this is source, show source (dark blue) + background (light blue)
+    // If this is source, show source (dark blue/red) + background (light blue)
     datasets.push({
       label: source.name || 'Zdroj hluku',
       data: source.avgFrequencies,
-      backgroundColor: 'rgba(37, 99, 235, 0.8)',
-      borderColor: 'rgba(29, 78, 216, 1)',
+      backgroundColor: sourceBackgroundColors,
+      borderColor: sourceBorderColors,
       borderWidth: 2,
     });
     if (background) {
@@ -68,6 +80,24 @@ export function StationarySourceDetail({ source, allSources, onClose }: Stationa
       borderWidth: 2,
     });
   }
+
+  // Add hearing threshold line (for frequencies 20-160 Hz)
+  const hearingThresholdData = STATIONARY_FREQUENCY_LIST.map(freq => {
+    return HEARING_THRESHOLD[freq] || null;
+  });
+
+  datasets.push({
+    type: 'line' as const,
+    label: 'Práh slyšení',
+    data: hearingThresholdData,
+    borderColor: 'rgba(107, 114, 128, 1)',
+    backgroundColor: 'rgba(107, 114, 128, 0.1)',
+    borderWidth: 2,
+    pointRadius: 3,
+    pointBackgroundColor: 'rgba(107, 114, 128, 1)',
+    fill: false,
+    spanGaps: false,
+  });
 
   const chartData = {
     labels: STATIONARY_FREQUENCY_LIST.map(f => f.toString()),
@@ -268,7 +298,14 @@ export function StationarySourceDetail({ source, allSources, onClose }: Stationa
                       {source.name || (isSource ? 'Zdroj' : 'Pozadí')}
                     </td>
                     {source.avgFrequencies.map((value, i) => (
-                      <td key={i} className="px-2 py-2 text-center border-r">
+                      <td
+                        key={i}
+                        className={`px-2 py-2 text-center border-r ${
+                          source.tonalComponents && source.tonalComponents[i]
+                            ? 'bg-red-100 text-red-900 font-bold'
+                            : ''
+                        }`}
+                      >
                         {formatNumber(value)}
                       </td>
                     ))}

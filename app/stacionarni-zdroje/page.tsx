@@ -6,8 +6,8 @@ import { StationaryFileUpload } from '@/components/StationaryFileUpload';
 import { StationaryChart } from '@/components/StationaryChart';
 import { StationarySourceTable } from '@/components/StationarySourceTable';
 import { SourceTypeDialog } from '@/components/SourceTypeDialog';
-import { StationaryData, StationaryDataPoint, StationarySource } from '@/types/stationary';
-import { calculateStationaryStats } from '@/lib/stationaryCalculations';
+import { StationaryData, StationaryDataPoint, StationarySource, STATIONARY_FREQUENCY_LIST } from '@/types/stationary';
+import { calculateStationaryStats, detectTonalComponents } from '@/lib/stationaryCalculations';
 import { format } from 'date-fns';
 import { cs } from 'date-fns/locale';
 
@@ -58,6 +58,9 @@ export default function StacionarniZdroje() {
     const sourceCount = sources.filter(s => s.type === 'source').length;
     const defaultName = type === 'background' ? 'Hluk pozadí' : `Zdroj hluku ${sourceCount + 1}`;
 
+    // Detect tonal components
+    const tonalComponents = detectTonalComponents(stats.avgFrequencies, STATIONARY_FREQUENCY_LIST);
+
     const timestamp = new Date().getTime();
     const newSource: StationarySource = {
       id: `source-${timestamp}`,
@@ -74,6 +77,7 @@ export default function StacionarniZdroje() {
       min: stats.min,
       max: stats.max,
       avgFrequencies: stats.avgFrequencies,
+      tonalComponents,
       startIndex: startIdx,
       endIndex: endIdx,
     };
