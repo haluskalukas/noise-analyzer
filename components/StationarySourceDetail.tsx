@@ -2,12 +2,14 @@
 
 import { useRef } from 'react';
 import { StationarySource, STATIONARY_FREQUENCY_LIST, HEARING_THRESHOLD } from '@/types/stationary';
-import { Bar } from 'react-chartjs-2';
+import { Chart } from 'react-chartjs-2';
 import {
   Chart as ChartJS,
   CategoryScale,
   LinearScale,
   BarElement,
+  LineElement,
+  PointElement,
   Title,
   Tooltip,
   Legend,
@@ -19,6 +21,8 @@ ChartJS.register(
   CategoryScale,
   LinearScale,
   BarElement,
+  LineElement,
+  PointElement,
   Title,
   Tooltip,
   Legend
@@ -267,7 +271,7 @@ export function StationarySourceDetail({ source, allSources, onClose }: Stationa
           {/* Chart */}
           <div className="bg-white border-2 border-gray-200 rounded-xl p-4">
             <div style={{ height: '400px' }}>
-              <Bar ref={chartRef} data={chartData} options={chartOptions} />
+              <Chart ref={chartRef} type="bar" data={chartData} options={chartOptions} />
             </div>
           </div>
 
