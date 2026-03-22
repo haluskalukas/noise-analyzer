@@ -62,10 +62,15 @@ export function StationaryConclusion({ sources, allSources, reflectionCorrection
   };
 
   const sourcesWithCalcs = useMemo(() => {
-    return sources.filter(s => s.type === 'source').map(source => ({
-      source,
-      ...calculateFinalLevel(source),
-    }));
+    return sources.filter(s => s.type === 'source').map(source => {
+      const calc = calculateFinalLevel(source);
+      return {
+        source,
+        ...calc,
+        // Final value with uncertainty SUBTRACTED (not added)
+        finalWithUncertainty: calc.finalLevel - calc.uncertainty,
+      };
+    });
   }, [sources, reflectionCorrections]);
 
   const handleExportToExcel = () => {
@@ -76,10 +81,9 @@ export function StationaryConclusion({ sources, allSources, reflectionCorrection
     data.push(['']);
 
     sourcesWithCalcs.forEach((item, index) => {
-      const { source, finalLevel, uncertainty, hasTonal } = item;
+      const { source, finalLevel, uncertainty, hasTonal, finalWithUncertainty } = item;
       const dayLimit = hasTonal ? 45 : 50;
       const nightLimit = hasTonal ? 35 : 40;
-      const finalWithUncertainty = finalLevel + uncertainty;
 
       if (index > 0) data.push(['']);
 
@@ -88,30 +92,30 @@ export function StationaryConclusion({ sources, allSources, reflectionCorrection
 
       // Day table
       data.push(['DENNÍ DOBA']);
-      data.push(['', 'OBVYKLPS']);
-      data.push(['denní doba', 'stanovený hygienický limit']);
-      data.push(['', dayLimit]);
+      data.push(['druh chráněného prostoru', 'OBVYKLPS (oblast s vyšší potřebou klidu a pohody, smíšená)']);
+      data.push(['', 'stanovený hygienický limit']);
+      data.push(['denní doba', dayLimit.toFixed(1)]);
       data.push(['']);
-      data.push(['výsledná dopadající hladina při převodu legalního čerpání, korigované na zbytkový hluk, stanovená pro referenční časový interval LAeq,8 h od 6dB', formatNumber(finalLevel)]);
+      data.push(['výsledná dopadající hladina při převodu legalního čerpání, korigovaná na zbytkový hluk, stanovená pro referenční časový interval LAeq,8 h od (dB)', finalLevel.toFixed(1)]);
       data.push(['']);
-      data.push(['kombinovaná rozšířená nejistota měření (dB)', formatNumber(uncertainty)]);
+      data.push(['kombinovaná rozšířená nejistota měření (dB)', uncertainty.toFixed(1)]);
       data.push(['']);
-      data.push(['výsledná hodnota hladiny hluku po odečtení regulace, stanovená pro dobu provozu legalního čerpání LAeq,8 h od (dB)', formatNumber(finalWithUncertainty)]);
+      data.push(['výsledná hodnota hladiny hluku po odečtení nejistoty měření, stanovená pro dobu provozu legalního čerpání LAeq,8 h od (dB)', finalWithUncertainty.toFixed(1)]);
       data.push(['']);
       data.push(['Hygienický limit není prokázatelně překročen', finalWithUncertainty <= dayLimit ? 'ANO' : 'NE']);
       data.push(['']);
 
       // Night table
       data.push(['NOČNÍ DOBA']);
-      data.push(['', 'OBVYKLPS']);
-      data.push(['noční doba', 'stanovený hygienický limit']);
-      data.push(['', nightLimit]);
+      data.push(['druh chráněného prostoru', 'OBVYKLPS (oblast s vyšší potřebou klidu a pohody, smíšená)']);
+      data.push(['', 'stanovený hygienický limit']);
+      data.push(['noční doba', nightLimit.toFixed(1)]);
       data.push(['']);
-      data.push(['výsledná dopadající hladina při převodu legalního čerpání, korigované na zbytkový hluk, stanovená pro referenční časový interval LAeq,8 h od 6dB', formatNumber(finalLevel)]);
+      data.push(['výsledná dopadající hladina při převodu legalního čerpání, korigovaná na zbytkový hluk, stanovená pro referenční časový interval LAeq,8 h od (dB)', finalLevel.toFixed(1)]);
       data.push(['']);
-      data.push(['kombinovaná rozšířená nejistota měření (dB)', formatNumber(uncertainty)]);
+      data.push(['kombinovaná rozšířená nejistota měření (dB)', uncertainty.toFixed(1)]);
       data.push(['']);
-      data.push(['výsledná hodnota hladiny hluku po odečtení regulace, stanovená pro dobu provozu legalního čerpání LAeq,8 h od (dB)', formatNumber(finalWithUncertainty)]);
+      data.push(['výsledná hodnota hladiny hluku po odečtení nejistoty měření, stanovená pro dobu provozu legalního čerpání LAeq,8 h od (dB)', finalWithUncertainty.toFixed(1)]);
       data.push(['']);
       data.push(['Hygienický limit není prokázatelně překročen', finalWithUncertainty <= nightLimit ? 'ANO' : 'NE']);
     });
@@ -145,10 +149,9 @@ export function StationaryConclusion({ sources, allSources, reflectionCorrection
         </button>
       </div>
 
-      {sourcesWithCalcs.map(({ source, finalLevel, uncertainty, hasTonal }) => {
+      {sourcesWithCalcs.map(({ source, finalLevel, uncertainty, hasTonal, finalWithUncertainty }) => {
         const dayLimit = hasTonal ? 45 : 50;
         const nightLimit = hasTonal ? 35 : 40;
-        const finalWithUncertainty = finalLevel + uncertainty;
         const dayExceeded = finalWithUncertainty > dayLimit;
         const nightExceeded = finalWithUncertainty > nightLimit;
 
@@ -170,11 +173,16 @@ export function StationaryConclusion({ sources, allSources, reflectionCorrection
                 <table className="min-w-full">
                   <tbody className="divide-y divide-gray-200">
                     <tr className="bg-gray-50">
-                      <td className="px-4 py-3 text-sm font-medium text-gray-700">
-                        denní doba
+                      <td className="px-4 py-3 text-xs text-gray-700">
+                        druh chráněného prostoru
                       </td>
-                      <td className="px-4 py-3 text-sm text-gray-900 text-right">
-                        OBVYKLPS
+                      <td className="px-4 py-3 text-xs text-gray-900 text-right">
+                        OBVAYLPS
+                      </td>
+                    </tr>
+                    <tr className="bg-gray-50">
+                      <td className="px-4 py-3 text-xs italic text-gray-600" colSpan={2}>
+                        (oblast s vyšší potřebou klidu a pohody, smíšená)
                       </td>
                     </tr>
                     <tr className="bg-blue-50">
@@ -183,18 +191,21 @@ export function StationaryConclusion({ sources, allSources, reflectionCorrection
                       </td>
                     </tr>
                     <tr className="bg-blue-100">
-                      <td className="px-4 py-3 text-center text-lg font-bold text-gray-900" colSpan={2}>
-                        {dayLimit} dB
+                      <td className="px-4 py-3 text-sm text-gray-700">
+                        denní doba
+                      </td>
+                      <td className="px-4 py-3 text-center text-lg font-bold text-gray-900">
+                        {dayLimit.toFixed(1)} dB
                       </td>
                     </tr>
                     <tr>
                       <td className="px-4 py-3 text-xs text-gray-600" colSpan={2}>
-                        výsledná dopadající hladina při převodu legálního čerpání, korigovaná na zbytkový hluk, stanovená pro referenční časový interval L<sub>Aeq,8 h od 6dB</sub>
+                        výsledná dopadající hladina při převodu legálního čerpání, korigovaná na zbytkový hluk, stanovená pro referenční časový interval L<sub>Aeq,8 h od</sub> (dB)
                       </td>
                     </tr>
                     <tr className="bg-gray-50">
                       <td className="px-4 py-3 text-center font-semibold text-gray-900" colSpan={2}>
-                        {formatNumber(finalLevel)} dB
+                        {finalLevel.toFixed(1)} dB
                       </td>
                     </tr>
                     <tr>
@@ -204,17 +215,17 @@ export function StationaryConclusion({ sources, allSources, reflectionCorrection
                     </tr>
                     <tr className="bg-gray-50">
                       <td className="px-4 py-3 text-center font-semibold text-gray-900" colSpan={2}>
-                        {formatNumber(uncertainty)} dB
+                        {uncertainty.toFixed(1)} dB
                       </td>
                     </tr>
                     <tr>
                       <td className="px-4 py-3 text-xs text-gray-600" colSpan={2}>
-                        výsledná hodnota hladiny hluku po odečtení regulace, stanovená pro dobu provozu legálního čerpání L<sub>Aeq,8 h od</sub> (dB)
+                        výsledná hodnota hladiny hluku po odečtení nejistoty měření, stanovená pro dobu provozu legálního čerpání L<sub>Aeq,8 h od</sub> (dB)
                       </td>
                     </tr>
                     <tr className="bg-yellow-50">
                       <td className="px-4 py-3 text-center font-bold text-gray-900" colSpan={2}>
-                        {formatNumber(finalWithUncertainty)} dB
+                        {finalWithUncertainty.toFixed(1)} dB
                       </td>
                     </tr>
                     <tr className={dayExceeded ? 'bg-red-100' : 'bg-green-100'}>
@@ -234,11 +245,16 @@ export function StationaryConclusion({ sources, allSources, reflectionCorrection
                 <table className="min-w-full">
                   <tbody className="divide-y divide-gray-200">
                     <tr className="bg-gray-50">
-                      <td className="px-4 py-3 text-sm font-medium text-gray-700">
-                        noční doba
+                      <td className="px-4 py-3 text-xs text-gray-700">
+                        druh chráněného prostoru
                       </td>
-                      <td className="px-4 py-3 text-sm text-gray-900 text-right">
-                        OBVYKLPS
+                      <td className="px-4 py-3 text-xs text-gray-900 text-right">
+                        OBVAYLPS
+                      </td>
+                    </tr>
+                    <tr className="bg-gray-50">
+                      <td className="px-4 py-3 text-xs italic text-gray-600" colSpan={2}>
+                        (oblast s vyšší potřebou klidu a pohody, smíšená)
                       </td>
                     </tr>
                     <tr className="bg-blue-50">
@@ -247,18 +263,21 @@ export function StationaryConclusion({ sources, allSources, reflectionCorrection
                       </td>
                     </tr>
                     <tr className="bg-blue-100">
-                      <td className="px-4 py-3 text-center text-lg font-bold text-gray-900" colSpan={2}>
-                        {nightLimit} dB
+                      <td className="px-4 py-3 text-sm text-gray-700">
+                        noční doba
+                      </td>
+                      <td className="px-4 py-3 text-center text-lg font-bold text-gray-900">
+                        {nightLimit.toFixed(1)} dB
                       </td>
                     </tr>
                     <tr>
                       <td className="px-4 py-3 text-xs text-gray-600" colSpan={2}>
-                        výsledná dopadající hladina při převodu legálního čerpání, korigovaná na zbytkový hluk, stanovená pro referenční časový interval L<sub>Aeq,8 h od 6dB</sub>
+                        výsledná dopadající hladina při převodu legálního čerpání, korigovaná na zbytkový hluk, stanovená pro referenční časový interval L<sub>Aeq,8 h od</sub> (dB)
                       </td>
                     </tr>
                     <tr className="bg-gray-50">
                       <td className="px-4 py-3 text-center font-semibold text-gray-900" colSpan={2}>
-                        {formatNumber(finalLevel)} dB
+                        {finalLevel.toFixed(1)} dB
                       </td>
                     </tr>
                     <tr>
@@ -268,17 +287,17 @@ export function StationaryConclusion({ sources, allSources, reflectionCorrection
                     </tr>
                     <tr className="bg-gray-50">
                       <td className="px-4 py-3 text-center font-semibold text-gray-900" colSpan={2}>
-                        {formatNumber(uncertainty)} dB
+                        {uncertainty.toFixed(1)} dB
                       </td>
                     </tr>
                     <tr>
                       <td className="px-4 py-3 text-xs text-gray-600" colSpan={2}>
-                        výsledná hodnota hladiny hluku po odečtení regulace, stanovená pro dobu provozu legálního čerpání L<sub>Aeq,8 h od</sub> (dB)
+                        výsledná hodnota hladiny hluku po odečtení nejistoty měření, stanovená pro dobu provozu legálního čerpání L<sub>Aeq,8 h od</sub> (dB)
                       </td>
                     </tr>
                     <tr className="bg-yellow-50">
                       <td className="px-4 py-3 text-center font-bold text-gray-900" colSpan={2}>
-                        {formatNumber(finalWithUncertainty)} dB
+                        {finalWithUncertainty.toFixed(1)} dB
                       </td>
                     </tr>
                     <tr className={nightExceeded ? 'bg-red-100' : 'bg-green-100'}>
