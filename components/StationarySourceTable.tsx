@@ -208,21 +208,6 @@ export function StationarySourceTable({
         />
       )}
 
-      <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
-        <p className="text-sm text-amber-800">
-          <strong>ℹ️ Vysvětlivky:</strong>
-        </p>
-        <ul className="text-xs text-amber-700 mt-2 space-y-1">
-          <li>• <strong>LAeq</strong> = Ekvivalentní hladina hluku A (energetický průměr)</li>
-          <li>• <strong>L5</strong> = 5% času je hluk VYŠŠÍ (špičky)</li>
-          <li>• <strong>L10</strong> = 10% času je hluk VYŠŠÍ</li>
-          <li>• <strong>L50</strong> = 50% času je hluk VYŠŠÍ (medián)</li>
-          <li>• <strong>L90</strong> = 90% času je hluk VYŠŠÍ (pozadí)</li>
-          <li>• <strong>L95</strong> = 95% času je hluk VYŠŠÍ (minimum)</li>
-          <li>• <strong className="text-orange-600">Oranžové pozadí</strong> = Zdroj hluku</li>
-          <li>• <strong className="text-blue-600">Modré pozadí</strong> = Hluk pozadí</li>
-        </ul>
-      </div>
     </div>
   );
 }
