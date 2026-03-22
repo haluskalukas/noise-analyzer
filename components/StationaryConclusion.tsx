@@ -107,11 +107,11 @@ export function StationaryConclusion({ sources, allSources, reflectionCorrection
       } else {
         correctionText = 'výsledná dopadající hladina, nekorigována na zbytkový hluk';
       }
-      data.push([`${correctionText}, stanovena pro referenční časový interval LAeq,8/1 hod`, formatNumber(finalLevel)]);
+      data.push([`${correctionText}, stanovena pro referenční časový interval LAeq,8 hod`, formatNumber(finalLevel)]);
       data.push(['']);
       data.push(['kombinovaná rozšířená nejistota měření (dB)', formatNumber(uncertainty)]);
       data.push(['']);
-      data.push(['výsledná hodnota hladiny hluku po odečtení nejistoty měření, stanovena pro dobu provozu zdroje hluku LAeq,8/1 hod (dB)', formatNumber(finalWithUncertainty)]);
+      data.push(['výsledná hodnota hladiny hluku po odečtení nejistoty měření, stanovena pro dobu provozu zdroje hluku LAeq,8 hod (dB)', formatNumber(finalWithUncertainty)]);
       data.push(['']);
       const dayConclusion = finalWithUncertainty > dayLimit
         ? 'Hygienický limit je prokázatelně překročen'
@@ -125,11 +125,11 @@ export function StationaryConclusion({ sources, allSources, reflectionCorrection
       data.push(['', 'stanovený hygienický limit']);
       data.push(['noční doba', formatNumber(nightLimit)]);
       data.push(['']);
-      data.push([`${correctionText}, stanovena pro referenční časový interval LAeq,8/1 hod`, formatNumber(finalLevel)]);
+      data.push([`${correctionText}, stanovena pro referenční časový interval LAeq,1 hod`, formatNumber(finalLevel)]);
       data.push(['']);
       data.push(['kombinovaná rozšířená nejistota měření (dB)', formatNumber(uncertainty)]);
       data.push(['']);
-      data.push(['výsledná hodnota hladiny hluku po odečtení nejistoty měření, stanovena pro dobu provozu zdroje hluku LAeq,8/1 hod (dB)', formatNumber(finalWithUncertainty)]);
+      data.push(['výsledná hodnota hladiny hluku po odečtení nejistoty měření, stanovena pro dobu provozu zdroje hluku LAeq,1 hod (dB)', formatNumber(finalWithUncertainty)]);
       data.push(['']);
       const nightConclusion = finalWithUncertainty > nightLimit
         ? 'Hygienický limit je prokázatelně překročen'
@@ -222,7 +222,7 @@ export function StationaryConclusion({ sources, allSources, reflectionCorrection
                     </tr>
                     <tr>
                       <td className="px-4 py-3 text-xs text-gray-600" colSpan={2}>
-                        {correctionText}, stanovena pro referenční časový interval L<sub>Aeq,8/1 hod</sub>
+                        {correctionText}, stanovena pro referenční časový interval L<sub>Aeq,8 hod</sub>
                       </td>
                     </tr>
                     <tr className="bg-gray-50">
@@ -242,7 +242,7 @@ export function StationaryConclusion({ sources, allSources, reflectionCorrection
                     </tr>
                     <tr>
                       <td className="px-4 py-3 text-xs text-gray-600" colSpan={2}>
-                        výsledná hodnota hladiny hluku po odečtení nejistoty měření, stanovena pro dobu provozu zdroje hluku L<sub>Aeq,8/1 hod</sub> (dB)
+                        výsledná hodnota hladiny hluku po odečtení nejistoty měření, stanovena pro dobu provozu zdroje hluku L<sub>Aeq,8 hod</sub> (dB)
                       </td>
                     </tr>
                     <tr className="bg-yellow-50">
@@ -289,7 +289,7 @@ export function StationaryConclusion({ sources, allSources, reflectionCorrection
                     </tr>
                     <tr>
                       <td className="px-4 py-3 text-xs text-gray-600" colSpan={2}>
-                        {correctionText}, stanovena pro referenční časový interval L<sub>Aeq,8/1 hod</sub>
+                        {correctionText}, stanovena pro referenční časový interval L<sub>Aeq,1 hod</sub>
                       </td>
                     </tr>
                     <tr className="bg-gray-50">
@@ -309,7 +309,7 @@ export function StationaryConclusion({ sources, allSources, reflectionCorrection
                     </tr>
                     <tr>
                       <td className="px-4 py-3 text-xs text-gray-600" colSpan={2}>
-                        výsledná hodnota hladiny hluku po odečtení nejistoty měření, stanovena pro dobu provozu zdroje hluku L<sub>Aeq,8/1 hod</sub> (dB)
+                        výsledná hodnota hladiny hluku po odečtení nejistoty měření, stanovena pro dobu provozu zdroje hluku L<sub>Aeq,1 hod</sub> (dB)
                       </td>
                     </tr>
                     <tr className="bg-yellow-50">
