@@ -139,17 +139,6 @@ export default function StacionarniZdroje() {
               </div>
             </div>
 
-            <div className="mt-6 bg-amber-50 border border-amber-200 rounded-lg p-6">
-              <h3 className="text-sm font-medium text-amber-900 mb-2 flex items-center gap-2">
-                📊 Co aplikace počítá
-              </h3>
-              <div className="text-xs text-amber-800 space-y-2">
-                <p><strong>LAeq</strong> - Ekvivalentní hladina hluku A (logaritmický průměr)</p>
-                <p><strong>Percentily</strong> - L5, L10, L50, L90, L95 (akustická notace)</p>
-                <p><strong>Frekvenční spektrum</strong> - Průměrné hodnoty pro všech 31 frekvencí (1/3 oktávy)</p>
-                <p><strong>Min/Max</strong> - Minimální a maximální hodnoty za interval</p>
-              </div>
-            </div>
           </div>
         ) : (
           <div className="space-y-6">
@@ -172,7 +161,7 @@ export default function StacionarniZdroje() {
 
             <div className="bg-white rounded-lg shadow-sm p-6">
               <h3 className="text-lg font-semibold text-gray-900 mb-4">
-                Graf měření - výběr intervalů (zdroj + pozadí)
+                Graf měření
               </h3>
               <StationaryChart
                 data={stationaryData.points}
