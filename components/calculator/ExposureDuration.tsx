@@ -8,7 +8,6 @@ export function ExposureDuration() {
   const [singleLaeq, setSingleLaeq] = useState('');
   const [singleT, setSingleT] = useState('');
   const [singleRefT, setSingleRefT] = useState('');
-  const [singleUnit, setSingleUnit] = useState<'hours' | 'minutes'>('hours');
 
   // Multiple sources
   const [multiRefT, setMultiRefT] = useState('480');
@@ -123,41 +122,13 @@ export function ExposureDuration() {
               />
             </div>
           </div>
-
-          <div>
-            <label className="block text-sm font-medium text-emerald-900 mb-2">Jednotka</label>
-            <div className="flex gap-4">
-              <label className="flex items-center gap-2 cursor-pointer">
-                <input
-                  type="radio"
-                  name="unit"
-                  value="hours"
-                  checked={singleUnit === 'hours'}
-                  onChange={() => setSingleUnit('hours')}
-                  className="w-4 h-4 text-emerald-600 focus:ring-emerald-500"
-                />
-                <span className="text-sm text-gray-700">Hodiny</span>
-              </label>
-              <label className="flex items-center gap-2 cursor-pointer">
-                <input
-                  type="radio"
-                  name="unit"
-                  value="minutes"
-                  checked={singleUnit === 'minutes'}
-                  onChange={() => setSingleUnit('minutes')}
-                  className="w-4 h-4 text-emerald-600 focus:ring-emerald-500"
-                />
-                <span className="text-sm text-gray-700">Minuty</span>
-              </label>
-            </div>
-          </div>
         </div>
 
         <div className="bg-emerald-900 text-white rounded-lg p-4 text-center">
           <div className="text-sm font-medium mb-1">LAeq,T - Výsledná hladina</div>
           <div className="text-3xl font-bold">{formatResult(calculateSingle(), 1)} dB</div>
           <div className="text-sm mt-1 opacity-80">
-            pro referenční interval {singleRefT} {singleUnit === 'hours' ? 'hod' : 'min'}
+            pro referenční interval {singleRefT}
           </div>
         </div>
       </div>
