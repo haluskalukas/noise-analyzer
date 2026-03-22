@@ -24,7 +24,7 @@ export default function AkustickyKalkulator() {
       id: 'distance' as const,
       name: 'Útlum vzdáleností',
       icon: '📐',
-      description: '6 typů výpočtů útlumu',
+      description: '3 typy výpočtů útlumu',
       color: 'from-indigo-500 to-blue-500',
     },
     {
