@@ -101,6 +101,9 @@ export function VibrationTrainDetail({ train, onClose }: VibrationTrainDetailPro
             return label;
           }
         }
+      },
+      datalabels: {
+        display: false,
       }
     },
     scales: {
