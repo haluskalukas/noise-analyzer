@@ -70,7 +70,7 @@ export default function Home() {
       description: 'Kalkulace akustických veličin a převody jednotek',
       icon: '🧮',
       color: 'from-indigo-500 to-indigo-600',
-      available: false,
+      available: true,
     },
   ];
 
