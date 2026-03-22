@@ -7,6 +7,7 @@ import { StationaryChart } from '@/components/StationaryChart';
 import { StationarySourceTable } from '@/components/StationarySourceTable';
 import { StationaryCalculations } from '@/components/StationaryCalculations';
 import { StationaryConclusion } from '@/components/StationaryConclusion';
+import { StationaryCompleteExport } from '@/components/StationaryCompleteExport';
 import { SourceTypeDialog } from '@/components/SourceTypeDialog';
 import { StationaryData, StationaryDataPoint, StationarySource, STATIONARY_FREQUENCY_LIST } from '@/types/stationary';
 import { calculateStationaryStats, detectTonalComponents } from '@/lib/stationaryCalculations';
@@ -436,6 +437,13 @@ export default function StacionarniZdroje() {
                 </p>
               </div>
               <div className="flex gap-3">
+                {sources.length > 0 && (
+                  <StationaryCompleteExport
+                    sources={sources}
+                    allSources={sources}
+                    reflectionCorrections={reflectionCorrections}
+                  />
+                )}
                 <button
                   onClick={handleDownloadProject}
                   className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-md transition-colors flex items-center gap-2 shadow-sm"
