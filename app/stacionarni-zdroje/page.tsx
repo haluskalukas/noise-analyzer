@@ -35,10 +35,28 @@ export default function StacionarniZdroje() {
     const startTime = selectedPoints[0].datetime;
     const endTime = selectedPoints[selectedPoints.length - 1].datetime;
 
-    const hasSource = sources.some(s => s.type === 'source');
+    const hasBackground = sources.some(s => s.type === 'background');
+    const sourceCount = sources.filter(s => s.type === 'source').length;
 
-    const type: 'source' | 'background' = !hasSource ? 'source' : 'background';
-    const defaultName = type === 'source' ? 'Zdroj hluku' : 'Hluk pozadí';
+    // Determine type: if no background yet, ask user. Otherwise, it's a source.
+    let type: 'source' | 'background';
+    let defaultName: string;
+
+    if (!hasBackground && sourceCount === 0) {
+      // First selection - ask user
+      const isBackground = window.confirm('Je toto měření HLUKU POZADÍ?\n\nOK = Ano (Hluk pozadí)\nZrušit = Ne (Zdroj hluku)');
+      type = isBackground ? 'background' : 'source';
+      defaultName = type === 'background' ? 'Hluk pozadí' : 'Zdroj hluku 1';
+    } else if (!hasBackground) {
+      // Have sources but no background - ask if this is background
+      const isBackground = window.confirm('Je toto měření HLUKU POZADÍ?\n\nOK = Ano (Hluk pozadí)\nZrušit = Ne (další Zdroj hluku)');
+      type = isBackground ? 'background' : 'source';
+      defaultName = type === 'background' ? 'Hluk pozadí' : `Zdroj hluku ${sourceCount + 1}`;
+    } else {
+      // Already have background - this must be a source
+      type = 'source';
+      defaultName = `Zdroj hluku ${sourceCount + 1}`;
+    }
 
     const timestamp = new Date().getTime();
     const newSource: StationarySource = {

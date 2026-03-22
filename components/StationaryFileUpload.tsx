@@ -11,11 +11,9 @@ interface StationaryFileUploadProps {
 export function StationaryFileUpload({ onDataLoaded }: StationaryFileUploadProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [isDragging, setIsDragging] = useState(false);
 
-  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
-
+  const processFile = async (file: File) => {
     setIsLoading(true);
     setError(null);
 
@@ -30,12 +28,52 @@ export function StationaryFileUpload({ onDataLoaded }: StationaryFileUploadProps
     }
   };
 
+  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    await processFile(file);
+  };
+
+  const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    setIsDragging(true);
+  };
+
+  const handleDragLeave = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    setIsDragging(false);
+  };
+
+  const handleDrop = async (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    setIsDragging(false);
+
+    const file = e.dataTransfer.files?.[0];
+    if (!file) return;
+
+    if (!file.name.match(/\.(xlsx|xls|csv)$/i)) {
+      setError('Podporované formáty: .xlsx, .xls, .csv');
+      return;
+    }
+
+    await processFile(file);
+  };
+
   return (
-    <div className="bg-white rounded-lg shadow-sm p-6 border-2 border-dashed border-orange-300 hover:border-orange-500 transition-colors">
+    <div
+      className={`bg-white rounded-lg shadow-sm p-6 border-2 border-dashed transition-all ${
+        isDragging
+          ? 'border-orange-500 bg-orange-50'
+          : 'border-orange-300 hover:border-orange-500'
+      }`}
+      onDragOver={handleDragOver}
+      onDragLeave={handleDragLeave}
+      onDrop={handleDrop}
+    >
       <div className="text-center">
         <div className="text-6xl mb-4">🏭</div>
         <h3 className="text-lg font-semibold text-gray-900 mb-2">
-          Nahraj Excel soubor s měřením
+          {isDragging ? 'Pusť soubor zde' : 'Přetáhni Excel soubor sem'}
         </h3>
         <p className="text-sm text-gray-600 mb-4">
           Soubor musí obsahovat sloupce: Datum, Čas, LAeq, 31 frekvencí (20 Hz - 20 kHz)
