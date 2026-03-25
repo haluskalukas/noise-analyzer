@@ -5,7 +5,7 @@ import * as XLSX from 'xlsx';
 import { MeasurementData, ImpulseData } from '@/app/impulzni-hluk/page';
 
 interface ImpulseFileUploadProps {
-  onDataLoaded: (data: ImpulseData[], fileName: string) => void;
+  onDataLoaded: (impulses: ImpulseData[], allMeasurements: MeasurementData[], fileName: string) => void;
 }
 
 export default function ImpulseFileUpload({ onDataLoaded }: ImpulseFileUploadProps) {
@@ -162,7 +162,7 @@ export default function ImpulseFileUpload({ onDataLoaded }: ImpulseFileUploadPro
       console.log(`- Denní doba: ${impulses.filter(i => i.isDaytime).length} impulsů`);
       console.log(`- Noční doba: ${impulses.filter(i => !i.isDaytime).length} impulsů`);
 
-      onDataLoaded(impulses, file.name);
+      onDataLoaded(impulses, validMeasurements, file.name);
     } catch (error) {
       console.error('Error parsing file:', error);
       alert('Chyba při načítání souboru.\n\nZkontrolujte:\n1. Formát souboru (Excel/CSV)\n2. Názvy sloupců (LAeq, LAImax, LASmax)\n3. Číselné hodnoty v dB');

@@ -32,6 +32,7 @@ export interface ImpulseData {
 
 export default function ImpulseNoisePage() {
   const [data, setData] = useState<ImpulseData[]>([]);
+  const [allMeasurements, setAllMeasurements] = useState<MeasurementData[]>([]);
   const [fileName, setFileName] = useState<string>('');
 
   // Try to load from localStorage on mount
@@ -46,6 +47,12 @@ export default function ImpulseNoisePage() {
             timestamp: new Date(d.timestamp),
           })));
           setFileName(parsed.fileName || '');
+        }
+        if (parsed.allMeasurements && Array.isArray(parsed.allMeasurements)) {
+          setAllMeasurements(parsed.allMeasurements.map((m: any) => ({
+            ...m,
+            timestamp: new Date(m.timestamp),
+          })));
         }
       }
     } catch (e) {
@@ -65,6 +72,10 @@ export default function ImpulseNoisePage() {
           ...d,
           timestamp: d.timestamp.toISOString(),
         })),
+        allMeasurements: allMeasurements.map(m => ({
+          ...m,
+          timestamp: m.timestamp.toISOString(),
+        })),
         fileName,
       };
       localStorage.setItem('impulzni-hluk-state', JSON.stringify(toSave));
@@ -76,16 +87,18 @@ export default function ImpulseNoisePage() {
         console.error('Failed to save to localStorage:', e);
       }
     }
-  }, [data, fileName]);
+  }, [data, allMeasurements, fileName]);
 
-  const handleDataLoaded = (newData: ImpulseData[], newFileName: string) => {
-    setData(newData);
+  const handleDataLoaded = (impulses: ImpulseData[], measurements: MeasurementData[], newFileName: string) => {
+    setData(impulses);
+    setAllMeasurements(measurements);
     setFileName(newFileName);
   };
 
   const handleClearData = () => {
     if (confirm('Opravdu chcete smazat všechna data?')) {
       setData([]);
+      setAllMeasurements([]);
       setFileName('');
       localStorage.removeItem('impulzni-hluk-state');
     }
@@ -147,6 +160,7 @@ export default function ImpulseNoisePage() {
                 <button
                   onClick={() => {
                     setData([]);
+                    setAllMeasurements([]);
                     setFileName('');
                     localStorage.removeItem('impulzni-hluk-state');
                   }}
@@ -164,7 +178,7 @@ export default function ImpulseNoisePage() {
 
             {/* Info Boxes */}
             <div className="mb-8">
-              <ImpulseInfoBoxes impulseData={data} />
+              <ImpulseInfoBoxes impulseData={data} allMeasurements={allMeasurements} />
             </div>
 
             {/* Data Table */}
