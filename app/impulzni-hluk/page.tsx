@@ -11,11 +11,7 @@ export interface ImpulseData {
   timestamp: Date;
   lAImax: number;       // dB(A) - Maximum s Impulse charakteristikou
   lASmax: number;       // dB(A) - Maximum se Slow charakteristikou
-  lAeq: number;         // dB(A) - Ekvivalentní hladina impulzu (po korekci na pozadí)
-  lAeqRaw?: number;     // dB(A) - Původní LAeq před korekcí
-  backgroundBefore?: number;  // dB(A) - Pozadí 1s před impulsem
-  backgroundAfter?: number;   // dB(A) - Pozadí 1s po impulsu
-  backgroundAvg?: number;     // dB(A) - Průměr pozadí
+  lAeq: number;         // dB(A) - Ekvivalentní hladina impulzu (již korigováno měřicím přístrojem)
   duration?: number;    // ms - Délka impulzu
   source?: string;      // Zdroj impulzu
   isHighlyImpulsive?: boolean; // Automaticky vypočítáno: LAImax - LASmax > 5 dB

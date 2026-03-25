@@ -32,7 +32,6 @@ export default function ImpulseStatistics({ data }: ImpulseStatisticsProps) {
 
   // Count highly impulsive events
   const highlyImpulsiveCount = data.filter((d) => d.isHighlyImpulsive).length;
-  const withBackgroundCorrection = data.filter((d) => d.backgroundAvg !== undefined).length;
 
   // Source statistics
   const sourceCount: Record<string, number> = {};
@@ -71,7 +70,7 @@ export default function ImpulseStatistics({ data }: ImpulseStatisticsProps) {
         <div className="bg-gradient-to-br from-green-500 to-green-600 rounded-lg p-6 text-white">
           <div className="text-sm font-medium opacity-90 mb-1">Průměr L<sub>Aeq</sub></div>
           <div className="text-3xl font-bold">{avgLAeq.toFixed(1)}</div>
-          <div className="text-xs opacity-75 mt-1">dB(A) - korigováno</div>
+          <div className="text-xs opacity-75 mt-1">dB(A)</div>
         </div>
       </div>
 
@@ -153,9 +152,9 @@ export default function ImpulseStatistics({ data }: ImpulseStatisticsProps) {
         </div>
       </div>
 
-      {/* Identification and Correction */}
+      {/* Identification */}
       <div className="mt-6 border border-gray-200 rounded-lg p-6">
-        <h3 className="font-semibold text-gray-800 mb-4">🔬 Identifikace a korekce</h3>
+        <h3 className="font-semibold text-gray-800 mb-4">🔬 Identifikace vysoce impulsního hluku</h3>
         <div className="space-y-3">
           <div className="flex items-center justify-between">
             <span className="text-gray-700">Vysoce impulsní hluk (LAImax - LASmax {'>'} 5 dB):</span>
@@ -167,18 +166,15 @@ export default function ImpulseStatistics({ data }: ImpulseStatisticsProps) {
             </span>
           </div>
           <div className="flex items-center justify-between">
-            <span className="text-gray-700">S korekcí na pozadí:</span>
-            <span className="font-bold text-gray-900">
-              {withBackgroundCorrection} / {data.length}
-              <span className="text-sm text-gray-600 ml-2">
-                ({((withBackgroundCorrection / data.length) * 100).toFixed(0)}%)
-              </span>
-            </span>
-          </div>
-          <div className="flex items-center justify-between">
             <span className="text-gray-700">Maximální rozdíl LAImax - LASmax:</span>
             <span className="font-bold text-gray-900">
               {Math.max(...data.map(d => d.lAImax - d.lASmax)).toFixed(1)} dB
+            </span>
+          </div>
+          <div className="flex items-center justify-between">
+            <span className="text-gray-700">Průměrný rozdíl LAImax - LASmax:</span>
+            <span className="font-bold text-gray-900">
+              {(data.reduce((sum, d) => sum + (d.lAImax - d.lASmax), 0) / data.length).toFixed(1)} dB
             </span>
           </div>
         </div>
@@ -189,8 +185,8 @@ export default function ImpulseStatistics({ data }: ImpulseStatisticsProps) {
           </p>
           <ul className="text-xs text-blue-800 space-y-1 list-disc list-inside">
             <li>Pro vysoce impulsní hluk se aplikuje korekce <strong>-12 dB</strong> k hygienickému limitu</li>
-            <li>LAeq impulzu musí být korigován na zbytkový hluk (pozadí před a po)</li>
             <li>Identifikace: rozdíl LAImax - LASmax {'>'} 5 dB</li>
+            <li>LAeq musí být korigován na zbytkový hluk měřicím přístrojem (1s před a po impulsu)</li>
           </ul>
         </div>
       </div>

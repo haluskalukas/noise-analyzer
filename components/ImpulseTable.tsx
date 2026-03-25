@@ -15,7 +15,6 @@ export default function ImpulseTable({ data }: ImpulseTableProps) {
 
   if (data.length === 0) return null;
 
-  const hasBackgroundData = data.some((d) => d.backgroundAvg !== undefined);
   const hasDuration = data.some((d) => d.duration !== undefined);
   const hasSource = data.some((d) => d.source !== undefined);
 
@@ -56,7 +55,6 @@ export default function ImpulseTable({ data }: ImpulseTableProps) {
       'LAeq [dB(A)]': d.lAeq.toFixed(1),
       'Rozdíl [dB]': (d.lAImax - d.lASmax).toFixed(1),
       'Vysoce impulsní': d.isHighlyImpulsive ? 'Ano' : 'Ne',
-      ...(hasBackgroundData && { 'Pozadí [dB(A)]': d.backgroundAvg?.toFixed(1) || '-' }),
       ...(hasDuration && { 'Délka [ms]': d.duration?.toFixed(0) || '-' }),
       ...(hasSource && { 'Zdroj': d.source || '-' }),
     }));
@@ -137,11 +135,6 @@ export default function ImpulseTable({ data }: ImpulseTableProps) {
               >
                 Rozdíl [dB] <SortIcon field="difference" />
               </th>
-              {hasBackgroundData && (
-                <th className="text-left py-3 px-4 font-semibold text-gray-700">
-                  Pozadí [dB(A)]
-                </th>
-              )}
               {hasDuration && (
                 <th className="text-left py-3 px-4 font-semibold text-gray-700">
                   Délka [ms]
@@ -183,22 +176,12 @@ export default function ImpulseTable({ data }: ImpulseTableProps) {
                   </td>
                   <td className="py-3 px-4 text-gray-900">
                     {d.lAeq.toFixed(1)}
-                    {d.backgroundAvg !== undefined && (
-                      <span className="text-xs text-blue-600 ml-1" title="Korigováno na pozadí">
-                        ✓
-                      </span>
-                    )}
                   </td>
                   <td className="py-3 px-4">
                     <span className={`font-bold ${isHighlyImpulsive ? 'text-red-600' : 'text-gray-900'}`}>
                       {difference.toFixed(1)}
                     </span>
                   </td>
-                  {hasBackgroundData && (
-                    <td className="py-3 px-4 text-gray-700">
-                      {d.backgroundAvg !== undefined ? d.backgroundAvg.toFixed(1) : '-'}
-                    </td>
-                  )}
                   {hasDuration && (
                     <td className="py-3 px-4 text-gray-900">
                       {d.duration !== undefined ? d.duration.toFixed(0) : '-'}

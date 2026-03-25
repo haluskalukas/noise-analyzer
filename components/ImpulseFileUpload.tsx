@@ -11,32 +11,6 @@ interface ImpulseFileUploadProps {
 export default function ImpulseFileUpload({ onDataLoaded }: ImpulseFileUploadProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  /**
-   * Logaritmický průměr dvou hodnot v dB
-   */
-  const logAverage = (dB1: number, dB2: number): number => {
-    const p1 = Math.pow(10, dB1 / 10);
-    const p2 = Math.pow(10, dB2 / 10);
-    return 10 * Math.log10((p1 + p2) / 2);
-  };
-
-  /**
-   * Energetické odečtení pozadí od signálu
-   * Signal - Background (v dB) = 10 * log10(10^(Signal/10) - 10^(Background/10))
-   */
-  const subtractBackground = (signalDb: number, backgroundDb: number): number => {
-    const signalPower = Math.pow(10, signalDb / 10);
-    const backgroundPower = Math.pow(10, backgroundDb / 10);
-
-    if (signalPower <= backgroundPower) {
-      // Signal je menší nebo roven pozadí - nemůžeme odečíst
-      return signalDb; // Vrátíme původní hodnotu
-    }
-
-    const correctedPower = signalPower - backgroundPower;
-    return 10 * Math.log10(correctedPower);
-  };
-
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
@@ -73,38 +47,10 @@ export default function ImpulseFileUpload({ onDataLoaded }: ImpulseFileUploadPro
           row['LASmax'] || row['LASMax'] || row['L ASmax'] || row['ASmax'] || '0'
         );
 
-        // Parse LAeq (REQUIRED)
-        const lAeqRaw = parseFloat(
+        // Parse LAeq (REQUIRED) - already corrected by the measurement device
+        const lAeq = parseFloat(
           row['LAeq'] || row['LAEq'] || row['L Aeq'] || row['Aeq'] || '0'
         );
-
-        // Parse background values (OPTIONAL)
-        const backgroundBefore = row['Pozadí před'] || row['Pozadi pred'] || row['Background before'] || row['Bg before']
-          ? parseFloat(row['Pozadí před'] || row['Pozadi pred'] || row['Background before'] || row['Bg before'])
-          : undefined;
-
-        const backgroundAfter = row['Pozadí po'] || row['Pozadi po'] || row['Background after'] || row['Bg after']
-          ? parseFloat(row['Pozadí po'] || row['Pozadi po'] || row['Background after'] || row['Bg after'])
-          : undefined;
-
-        // Calculate background average and corrected LAeq
-        let backgroundAvg: number | undefined;
-        let lAeq = lAeqRaw;
-
-        if (backgroundBefore !== undefined && backgroundAfter !== undefined) {
-          // Both background values available
-          backgroundAvg = logAverage(backgroundBefore, backgroundAfter);
-          lAeq = subtractBackground(lAeqRaw, backgroundAvg);
-        } else if (backgroundBefore !== undefined) {
-          // Only before available
-          backgroundAvg = backgroundBefore;
-          lAeq = subtractBackground(lAeqRaw, backgroundAvg);
-        } else if (backgroundAfter !== undefined) {
-          // Only after available
-          backgroundAvg = backgroundAfter;
-          lAeq = subtractBackground(lAeqRaw, backgroundAvg);
-        }
-        // Else: no background correction
 
         // Calculate if highly impulsive
         const difference = lAImax - lASmax;
@@ -122,10 +68,6 @@ export default function ImpulseFileUpload({ onDataLoaded }: ImpulseFileUploadPro
           lAImax,
           lASmax,
           lAeq,
-          lAeqRaw,
-          backgroundBefore,
-          backgroundAfter,
-          backgroundAvg,
           duration,
           source,
           isHighlyImpulsive,
@@ -146,11 +88,9 @@ export default function ImpulseFileUpload({ onDataLoaded }: ImpulseFileUploadPro
 
       // Show summary
       const highlyImpulsiveCount = validData.filter(d => d.isHighlyImpulsive).length;
-      const correctedCount = validData.filter(d => d.backgroundAvg !== undefined).length;
 
       console.log(`Načteno ${validData.length} impulzů:`);
       console.log(`- ${highlyImpulsiveCount} vysoce impulsních (LAImax - LASmax > 5 dB)`);
-      console.log(`- ${correctedCount} s korekcí na pozadí`);
 
       onDataLoaded(validData, file.name);
     } catch (error) {
@@ -249,16 +189,18 @@ export default function ImpulseFileUpload({ onDataLoaded }: ImpulseFileUploadPro
                 <li><strong>Datum a čas</strong> nebo <strong>Datum</strong> + <strong>Čas</strong></li>
                 <li><strong>LAImax</strong> - Maximum s Impulse charakteristikou [dB(A)]</li>
                 <li><strong>LASmax</strong> - Maximum se Slow charakteristikou [dB(A)]</li>
-                <li><strong>LAeq</strong> - Ekvivalentní hladina impulzu [dB(A)]</li>
+                <li><strong>LAeq</strong> - Ekvivalentní hladina impulzu [dB(A)] - již korigováno měřicím přístrojem</li>
               </ul>
 
               <p className="font-medium mt-4">Volitelné sloupce:</p>
               <ul className="list-disc list-inside space-y-1 ml-4">
-                <li><strong>Pozadí před</strong> - Pozadí 1s před impulsem [dB(A)]</li>
-                <li><strong>Pozadí po</strong> - Pozadí 1s po impulsem [dB(A)]</li>
                 <li><strong>Délka</strong> - Délka impulzu [ms]</li>
                 <li><strong>Zdroj</strong> - Popis zdroje impulzu</li>
               </ul>
+
+              <p className="text-xs text-blue-700 mt-3 italic">
+                <strong>Poznámka:</strong> LAeq musí být korigováno na zbytkový hluk měřicím přístrojem (průměr 1s před a po impulsu).
+              </p>
             </div>
 
             <div className="mt-4 p-4 bg-white rounded border border-blue-200">
@@ -273,8 +215,7 @@ export default function ImpulseFileUpload({ onDataLoaded }: ImpulseFileUploadPro
                       <th className="text-left py-1 px-2">LAImax</th>
                       <th className="text-left py-1 px-2">LASmax</th>
                       <th className="text-left py-1 px-2">LAeq</th>
-                      <th className="text-left py-1 px-2">Pozadí před</th>
-                      <th className="text-left py-1 px-2">Pozadí po</th>
+                      <th className="text-left py-1 px-2">Zdroj</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -283,27 +224,18 @@ export default function ImpulseFileUpload({ onDataLoaded }: ImpulseFileUploadPro
                       <td className="py-1 px-2">118.5</td>
                       <td className="py-1 px-2">105.2</td>
                       <td className="py-1 px-2">98.3</td>
-                      <td className="py-1 px-2">45.2</td>
-                      <td className="py-1 px-2">46.1</td>
+                      <td className="py-1 px-2">Výstřel</td>
                     </tr>
                     <tr>
                       <td className="py-1 px-2">14.3.2024 10:47</td>
                       <td className="py-1 px-2">122.1</td>
                       <td className="py-1 px-2">108.5</td>
                       <td className="py-1 px-2">102.8</td>
-                      <td className="py-1 px-2">46.5</td>
-                      <td className="py-1 px-2">45.8</td>
+                      <td className="py-1 px-2">Výstřel</td>
                     </tr>
                   </tbody>
                 </table>
               </div>
-            </div>
-
-            <div className="mt-4 p-3 bg-yellow-50 border border-yellow-300 rounded">
-              <p className="text-xs text-yellow-900">
-                <strong>⚠️ Poznámka:</strong> Pokud zadáte hodnoty pozadí (před/po),
-                aplikace automaticky provede energetické odečtení pozadí od LAeq impulzu.
-              </p>
             </div>
           </div>
         </div>
