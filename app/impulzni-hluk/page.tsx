@@ -34,8 +34,49 @@ export default function ImpulseNoisePage() {
   const [data, setData] = useState<ImpulseData[]>([]);
   const [fileName, setFileName] = useState<string>('');
 
-  // Note: LocalStorage is disabled for this module due to large data sizes
-  // Users should re-upload the file if they refresh the page
+  // Try to load from localStorage on mount
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem('impulzni-hluk-state');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (parsed.data && Array.isArray(parsed.data)) {
+          setData(parsed.data.map((d: any) => ({
+            ...d,
+            timestamp: new Date(d.timestamp),
+          })));
+          setFileName(parsed.fileName || '');
+        }
+      }
+    } catch (e) {
+      console.error('Failed to load from localStorage:', e);
+      // Clear corrupted data
+      localStorage.removeItem('impulzni-hluk-state');
+    }
+  }, []);
+
+  // Try to save to localStorage when data changes
+  useEffect(() => {
+    if (data.length === 0) return;
+
+    try {
+      const toSave = {
+        data: data.map(d => ({
+          ...d,
+          timestamp: d.timestamp.toISOString(),
+        })),
+        fileName,
+      };
+      localStorage.setItem('impulzni-hluk-state', JSON.stringify(toSave));
+    } catch (e) {
+      if (e instanceof Error && e.name === 'QuotaExceededError') {
+        console.warn('LocalStorage quota exceeded - data will not persist after page refresh');
+        // Don't show alert here, it's annoying during file processing
+      } else {
+        console.error('Failed to save to localStorage:', e);
+      }
+    }
+  }, [data, fileName]);
 
   const handleDataLoaded = (newData: ImpulseData[], newFileName: string) => {
     setData(newData);
@@ -46,6 +87,7 @@ export default function ImpulseNoisePage() {
     if (confirm('Opravdu chcete smazat všechna data?')) {
       setData([]);
       setFileName('');
+      localStorage.removeItem('impulzni-hluk-state');
     }
   };
 
@@ -106,6 +148,7 @@ export default function ImpulseNoisePage() {
                   onClick={() => {
                     setData([]);
                     setFileName('');
+                    localStorage.removeItem('impulzni-hluk-state');
                   }}
                   className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
                 >
