@@ -11,6 +11,7 @@ export default function Home() {
     const states: Record<string, boolean> = {};
     states['automobilova-doprava'] = !!localStorage.getItem('automobilova-doprava-state');
     states['zeleznicni-doprava-hluk'] = !!localStorage.getItem('zeleznicni-doprava-hluk-state');
+    states['impulzni-hluk'] = !!localStorage.getItem('impulzni-hluk-state');
     // Note: vibrace module doesn't use localStorage (files too large)
     setSavedStates(states);
   }, []);
@@ -46,6 +47,14 @@ export default function Home() {
       description: 'Analýza hluku ze stacionárních zdrojů',
       icon: '🏭',
       color: 'from-orange-500 to-orange-600',
+      available: true,
+    },
+    {
+      id: 'impulzni-hluk',
+      title: 'Impulzní hluk',
+      description: 'Analýza impulzních událostí (výbuchy, údery, výstřely)',
+      icon: '💥',
+      color: 'from-red-500 to-red-600',
       available: true,
     },
     {
