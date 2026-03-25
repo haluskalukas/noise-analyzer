@@ -173,7 +173,7 @@ export default function ImpulseNoisePage() {
 
             {/* Chart */}
             <div className="mb-8">
-              <ImpulseInteractiveChart data={data} />
+              <ImpulseInteractiveChart data={allMeasurements} impulses={data} />
             </div>
 
             {/* Info Boxes */}

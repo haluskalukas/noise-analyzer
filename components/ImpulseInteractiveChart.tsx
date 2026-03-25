@@ -1,14 +1,15 @@
 'use client';
 
 import { useRef, useEffect, useState, useMemo } from 'react';
-import { ImpulseData } from '@/app/impulzni-hluk/page';
+import { MeasurementData, ImpulseData } from '@/app/impulzni-hluk/page';
 import { formatNumber } from '@/lib/format';
 
 interface ImpulseInteractiveChartProps {
-  data: ImpulseData[];
+  data: MeasurementData[];
+  impulses: ImpulseData[];
 }
 
-export default function ImpulseInteractiveChart({ data }: ImpulseInteractiveChartProps) {
+export default function ImpulseInteractiveChart({ data, impulses }: ImpulseInteractiveChartProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -59,6 +60,11 @@ export default function ImpulseInteractiveChart({ data }: ImpulseInteractiveChar
       canvas.removeEventListener('wheel', handleWheelNative);
     };
   }, [wheelZoomEnabled]);
+
+  // Helper to check if a measurement is an impulse
+  const isImpulse = (measurement: MeasurementData): boolean => {
+    return (measurement.lAImax - measurement.lASmax) > 5.0;
+  };
 
   // Calculate visible data range
   const visibleData = useMemo(() => {
@@ -236,7 +242,7 @@ export default function ImpulseInteractiveChart({ data }: ImpulseInteractiveChar
     ctx.restore();
 
     // Draw data lines
-    const drawLine = (getValue: (d: ImpulseData) => number, color: string, lineWidth: number) => {
+    const drawLine = (getValue: (d: MeasurementData) => number, color: string, lineWidth: number) => {
       ctx.strokeStyle = color;
       ctx.lineWidth = lineWidth;
       ctx.lineJoin = 'round';
@@ -261,9 +267,14 @@ export default function ImpulseInteractiveChart({ data }: ImpulseInteractiveChar
           const x = xScale(i);
           const y = yScale(getValue(point));
 
-          ctx.fillStyle = color;
+          // Highlight impulses with larger, different colored points
+          const impulsePoint = isImpulse(point);
+          const pointRadius = impulsePoint ? 4 : 2;
+          const pointColor = impulsePoint ? '#ef4444' : color;
+
+          ctx.fillStyle = i === hoveredPoint ? '#2563eb' : pointColor;
           ctx.beginPath();
-          ctx.arc(x, y, i === hoveredPoint ? 5 : 3, 0, Math.PI * 2);
+          ctx.arc(x, y, i === hoveredPoint ? 6 : pointRadius, 0, Math.PI * 2);
           ctx.fill();
 
           if (i === hoveredPoint) {
@@ -290,17 +301,22 @@ export default function ImpulseInteractiveChart({ data }: ImpulseInteractiveChar
       if (showLAImax) lines.push(`LAImax: ${formatNumber(point.lAImax)} dB(A)`);
       if (showLASmax) lines.push(`LASmax: ${formatNumber(point.lASmax)} dB(A)`);
       if (showLAeq) lines.push(`LAeq: ${formatNumber(point.lAeq)} dB(A)`);
+
+      const difference = point.lAImax - point.lASmax;
+      const impulseStatus = isImpulse(point) ? `💥 IMPULS (rozdíl: ${formatNumber(difference)} dB)` : `Rozdíl: ${formatNumber(difference)} dB`;
+
       const time = `${point.timestamp.getHours().toString().padStart(2, '0')}:${point.timestamp.getMinutes().toString().padStart(2, '0')}:${point.timestamp.getSeconds().toString().padStart(2, '0')}`;
-      const dayNight = point.isDaytime ? '☀️ Den' : '🌙 Noc';
+      const hour = point.timestamp.getHours();
+      const dayNight = (hour >= 6 && hour < 22) ? '☀️ Den' : '🌙 Noc';
 
       ctx.font = '12px sans-serif';
-      const maxTextWidth = Math.max(...lines.map(l => ctx.measureText(l).width), ctx.measureText(time).width, ctx.measureText(dayNight).width);
+      const maxTextWidth = Math.max(...lines.map(l => ctx.measureText(l).width), ctx.measureText(time).width, ctx.measureText(dayNight).width, ctx.measureText(impulseStatus).width);
 
       const tooltipX = x + 15;
       const tooltipY = y - 20;
       const tooltipPadding = 8;
       const lineHeight = 16;
-      const tooltipHeight = tooltipPadding * 2 + (lines.length + 2) * lineHeight;
+      const tooltipHeight = tooltipPadding * 2 + (lines.length + 3) * lineHeight;
 
       // Tooltip background
       ctx.fillStyle = 'rgba(255, 255, 255, 0.98)';
@@ -329,6 +345,10 @@ export default function ImpulseInteractiveChart({ data }: ImpulseInteractiveChar
       ctx.fillText(time, tooltipX + tooltipPadding, textY);
       textY += lineHeight;
       ctx.fillText(dayNight, tooltipX + tooltipPadding, textY);
+      textY += lineHeight;
+      ctx.fillStyle = isImpulse(point) ? '#ef4444' : '#6b7280';
+      ctx.font = isImpulse(point) ? 'bold 11px sans-serif' : '11px sans-serif';
+      ctx.fillText(impulseStatus, tooltipX + tooltipPadding, textY);
     }
 
   }, [data, visibleData, zoom, pan, canvasSize, hoveredPoint, showLAeq, showLAImax, showLASmax]);
