@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef } from 'react';
+import { useRef, useState } from 'react';
 import * as XLSX from 'xlsx';
 import { MeasurementData, ImpulseData } from '@/app/impulzni-hluk/page';
 
