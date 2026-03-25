@@ -10,6 +10,7 @@ interface ImpulseFileUploadProps {
 
 export default function ImpulseFileUpload({ onDataLoaded }: ImpulseFileUploadProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [dragActive, setDragActive] = useState(false);
 
   /**
    * Logaritmický průměr dvou hodnot v dB
@@ -43,9 +44,7 @@ export default function ImpulseFileUpload({ onDataLoaded }: ImpulseFileUploadPro
     return hours >= 6 && hours < 22;
   };
 
-  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
+  const processFile = async (file: File) => {
 
     try {
       const arrayBuffer = await file.arrayBuffer();
@@ -155,10 +154,37 @@ export default function ImpulseFileUpload({ onDataLoaded }: ImpulseFileUploadPro
       console.error('Error parsing file:', error);
       alert('Chyba při načítání souboru.\n\nZkontrolujte:\n1. Formát souboru (Excel/CSV)\n2. Názvy sloupců (LAeq, LAImax, LASmax)\n3. Číselné hodnoty v dB');
     }
+  };
+
+  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    await processFile(file);
 
     // Reset file input
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
+    }
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDragActive(false);
+
+    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+      processFile(e.dataTransfer.files[0]);
+    }
+  };
+
+  const handleDrag = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (e.type === 'dragenter' || e.type === 'dragover') {
+      setDragActive(true);
+    } else if (e.type === 'dragleave') {
+      setDragActive(false);
     }
   };
 
@@ -199,7 +225,17 @@ export default function ImpulseFileUpload({ onDataLoaded }: ImpulseFileUploadPro
             Excel nebo CSV soubor s 1sekundovými daty (LAeq, LAImax, LASmax)
           </p>
 
-          <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 hover:border-blue-500 transition-colors">
+          <div
+            className={`border-2 border-dashed rounded-lg p-8 transition-colors ${
+              dragActive
+                ? 'border-blue-500 bg-blue-50'
+                : 'border-gray-300 hover:border-blue-500'
+            }`}
+            onDragEnter={handleDrag}
+            onDragLeave={handleDrag}
+            onDragOver={handleDrag}
+            onDrop={handleDrop}
+          >
             <input
               ref={fileInputRef}
               type="file"

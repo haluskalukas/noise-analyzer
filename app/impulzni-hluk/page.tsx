@@ -3,8 +3,8 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import ImpulseFileUpload from '@/components/ImpulseFileUpload';
-import ImpulseChart from '@/components/ImpulseChart';
-import ImpulseStatistics from '@/components/ImpulseStatistics';
+import ImpulseInteractiveChart from '@/components/ImpulseInteractiveChart';
+import ImpulseInfoBoxes from '@/components/ImpulseInfoBoxes';
 import ImpulseTable from '@/components/ImpulseTable';
 
 // Data z 1sekundového měření
@@ -146,14 +146,14 @@ export default function ImpulseNoisePage() {
               </div>
             </div>
 
-            {/* Statistics */}
-            <div className="mb-8">
-              <ImpulseStatistics data={data} />
-            </div>
-
             {/* Chart */}
             <div className="mb-8">
-              <ImpulseChart data={data} />
+              <ImpulseInteractiveChart data={data} />
+            </div>
+
+            {/* Info Boxes */}
+            <div className="mb-8">
+              <ImpulseInfoBoxes impulseData={data} />
             </div>
 
             {/* Data Table */}
