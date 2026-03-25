@@ -34,38 +34,8 @@ export default function ImpulseNoisePage() {
   const [data, setData] = useState<ImpulseData[]>([]);
   const [fileName, setFileName] = useState<string>('');
 
-  // Load saved state from localStorage
-  useEffect(() => {
-    const savedState = localStorage.getItem('impulzni-hluk-state');
-    if (savedState) {
-      try {
-        const parsed = JSON.parse(savedState);
-        setData(parsed.data.map((d: any) => ({
-          ...d,
-          timestamp: new Date(d.timestamp),
-        })));
-        setFileName(parsed.fileName);
-      } catch (e) {
-        console.error('Failed to load saved state:', e);
-      }
-    }
-  }, []);
-
-  // Save state to localStorage whenever data changes
-  useEffect(() => {
-    if (data.length > 0) {
-      localStorage.setItem(
-        'impulzni-hluk-state',
-        JSON.stringify({
-          data: data.map((d) => ({
-            ...d,
-            timestamp: d.timestamp.toISOString(),
-          })),
-          fileName,
-        })
-      );
-    }
-  }, [data, fileName]);
+  // Note: LocalStorage is disabled for this module due to large data sizes
+  // Users should re-upload the file if they refresh the page
 
   const handleDataLoaded = (newData: ImpulseData[], newFileName: string) => {
     setData(newData);
@@ -76,7 +46,6 @@ export default function ImpulseNoisePage() {
     if (confirm('Opravdu chcete smazat všechna data?')) {
       setData([]);
       setFileName('');
-      localStorage.removeItem('impulzni-hluk-state');
     }
   };
 
@@ -137,7 +106,6 @@ export default function ImpulseNoisePage() {
                   onClick={() => {
                     setData([]);
                     setFileName('');
-                    localStorage.removeItem('impulzni-hluk-state');
                   }}
                   className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
                 >
