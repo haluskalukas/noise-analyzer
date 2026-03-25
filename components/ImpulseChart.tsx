@@ -20,61 +20,45 @@ interface ImpulseChartProps {
 }
 
 export default function ImpulseChart({ data }: ImpulseChartProps) {
-  const [showLAeq, setShowLAeq] = useState(true);
-  const [showLASmax, setShowLASmax] = useState(true);
-
   if (data.length === 0) return null;
+
+  // Calculate day/night averages
+  const daytimeData = data.filter((d) => d.isDaytime);
+  const nighttimeData = data.filter((d) => !d.isDaytime);
+
+  const avgDaytimeLAeqCorrected = daytimeData.length > 0
+    ? daytimeData.reduce((sum, d) => sum + d.lAeqCorrected, 0) / daytimeData.length
+    : 0;
+
+  const avgNighttimeLAeqCorrected = nighttimeData.length > 0
+    ? nighttimeData.reduce((sum, d) => sum + d.lAeqCorrected, 0) / nighttimeData.length
+    : 0;
 
   // Prepare chart data
   const chartData = data.map((d, index) => ({
     index: index + 1,
-    timestamp: format(d.timestamp, 'dd.MM.yyyy HH:mm'),
-    lAImax: d.lAImax,
-    lASmax: d.lASmax,
-    lAeq: d.lAeq,
-    difference: d.lAImax - d.lASmax,
-    isHighlyImpulsive: d.isHighlyImpulsive,
+    timestamp: format(d.timestamp, 'dd.MM HH:mm'),
+    lAeqCorrected: d.lAeqCorrected,
+    isDaytime: d.isDaytime,
+    difference: d.difference,
   }));
 
   return (
     <div className="bg-white rounded-lg shadow-lg p-6">
-      <div className="flex items-center justify-between mb-6">
-        <h2 className="text-2xl font-bold text-gray-800">📈 Časový průběh</h2>
+      <h2 className="text-2xl font-bold text-gray-800 mb-6">📈 LAeq korigovaný - časový průběh</h2>
 
-        <div className="flex items-center gap-4">
-          <label className="flex items-center gap-2 cursor-pointer">
-            <input
-              type="checkbox"
-              checked={showLASmax}
-              onChange={(e) => setShowLASmax(e.target.checked)}
-              className="w-4 h-4"
-            />
-            <span className="text-sm text-gray-700">Zobrazit L<sub>ASmax</sub></span>
-          </label>
-          <label className="flex items-center gap-2 cursor-pointer">
-            <input
-              type="checkbox"
-              checked={showLAeq}
-              onChange={(e) => setShowLAeq(e.target.checked)}
-              className="w-4 h-4"
-            />
-            <span className="text-sm text-gray-700">Zobrazit L<sub>Aeq</sub></span>
-          </label>
-        </div>
-      </div>
-
-      <ResponsiveContainer width="100%" height={500}>
+      <ResponsiveContainer width="100%" height={400}>
         <LineChart data={chartData}>
           <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
           <XAxis
             dataKey="index"
-            label={{ value: 'Číslo události', position: 'insideBottom', offset: -5 }}
+            label={{ value: 'Číslo impulsu', position: 'insideBottom', offset: -5 }}
             stroke="#6b7280"
           />
           <YAxis
-            label={{ value: 'Hladina [dB(A)]', angle: -90, position: 'insideLeft' }}
+            label={{ value: 'LAeq korigovaný [dB(A)]', angle: -90, position: 'insideLeft' }}
             stroke="#6b7280"
-            domain={[60, 140]}
+            domain={[50, 110]}
           />
           <Tooltip
             contentStyle={{
@@ -84,17 +68,14 @@ export default function ImpulseChart({ data }: ImpulseChartProps) {
               padding: '12px',
             }}
             formatter={(value: any, name: any) => {
-              if (name === 'lAImax') return [value + ' dB(A)', 'LAImax'];
-              if (name === 'lASmax') return [value + ' dB(A)', 'LASmax'];
-              if (name === 'lAeq') return [value + ' dB(A)', 'LAeq'];
+              if (name === 'lAeqCorrected') return [value.toFixed(1) + ' dB(A)', 'LAeq korigovaný'];
               return [value, name];
             }}
             labelFormatter={(label: any, payload: any) => {
               if (payload && payload[0]) {
                 const p = payload[0].payload;
-                const diff = (p.lAImax - p.lASmax).toFixed(1);
-                const status = p.isHighlyImpulsive ? '💥 Vysoce impulsní' : '';
-                return `Událost #${label} - ${p.timestamp} ${status}\nRozdíl: ${diff} dB`;
+                const time = p.isDaytime ? '☀️ Den' : '🌙 Noc';
+                return `Impuls #${label} - ${p.timestamp}\n${time} • Rozdíl: ${p.difference.toFixed(1)} dB`;
               }
               return label;
             }}
@@ -103,32 +84,44 @@ export default function ImpulseChart({ data }: ImpulseChartProps) {
             verticalAlign="top"
             height={36}
             formatter={(value) => {
-              if (value === 'lAImax') return 'LAImax [dB(A)]';
-              if (value === 'lASmax') return 'LASmax [dB(A)]';
-              if (value === 'lAeq') return 'LAeq [dB(A)]';
+              if (value === 'lAeqCorrected') return 'LAeq korigovaný [dB(A)]';
               return value;
             }}
           />
 
-          {/* Reference line for identification threshold */}
-          <ReferenceLine
-            y={5}
-            stroke="#dc2626"
-            strokeDasharray="5 5"
-            label={{
-              value: 'Práh identifikace: rozdíl 5 dB',
-              position: 'right',
-              fill: '#dc2626',
-              fontSize: 11,
-            }}
-            ifOverflow="extendDomain"
-          />
+          {/* Reference lines for day/night averages */}
+          {avgDaytimeLAeqCorrected > 0 && (
+            <ReferenceLine
+              y={avgDaytimeLAeqCorrected}
+              stroke="#f59e0b"
+              strokeDasharray="5 5"
+              label={{
+                value: `☀️ Průměr den: ${avgDaytimeLAeqCorrected.toFixed(1)} dB(A)`,
+                position: 'right',
+                fill: '#f59e0b',
+                fontSize: 11,
+              }}
+            />
+          )}
+          {avgNighttimeLAeqCorrected > 0 && (
+            <ReferenceLine
+              y={avgNighttimeLAeqCorrected}
+              stroke="#3b82f6"
+              strokeDasharray="5 5"
+              label={{
+                value: `🌙 Průměr noc: ${avgNighttimeLAeqCorrected.toFixed(1)} dB(A)`,
+                position: 'right',
+                fill: '#3b82f6',
+                fontSize: 11,
+              }}
+            />
+          )}
 
-          {/* Data lines */}
+          {/* Data line */}
           <Line
             type="monotone"
-            dataKey="lAImax"
-            stroke="#dc2626"
+            dataKey="lAeqCorrected"
+            stroke="#10b981"
             strokeWidth={2}
             dot={(props: any) => {
               const { cx, cy, payload } = props;
@@ -136,74 +129,62 @@ export default function ImpulseChart({ data }: ImpulseChartProps) {
                 <circle
                   cx={cx}
                   cy={cy}
-                  r={payload.isHighlyImpulsive ? 6 : 4}
-                  fill={payload.isHighlyImpulsive ? '#dc2626' : '#ef4444'}
-                  stroke={payload.isHighlyImpulsive ? '#991b1b' : '#dc2626'}
-                  strokeWidth={payload.isHighlyImpulsive ? 2 : 1}
+                  r={5}
+                  fill={payload.isDaytime ? '#10b981' : '#3b82f6'}
+                  stroke={payload.isDaytime ? '#059669' : '#2563eb'}
+                  strokeWidth={2}
                 />
               );
             }}
             activeDot={{ r: 8 }}
           />
-
-          {showLASmax && (
-            <Line
-              type="monotone"
-              dataKey="lASmax"
-              stroke="#3b82f6"
-              strokeWidth={2}
-              dot={{ r: 4, fill: '#3b82f6' }}
-              activeDot={{ r: 6 }}
-            />
-          )}
-
-          {showLAeq && (
-            <Line
-              type="monotone"
-              dataKey="lAeq"
-              stroke="#10b981"
-              strokeWidth={2}
-              dot={{ r: 4, fill: '#10b981' }}
-              activeDot={{ r: 6 }}
-            />
-          )}
         </LineChart>
       </ResponsiveContainer>
 
-      {/* Chart Legend */}
-      <div className="mt-6 p-4 bg-gray-50 rounded-lg">
-        <h4 className="font-semibold text-gray-800 mb-3 text-sm">📊 Legenda:</h4>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
-          <div className="flex items-center gap-2">
-            <div className="w-12 h-1 bg-red-600 rounded"></div>
-            <span className="text-gray-700">
-              <strong>L<sub>AImax</sub></strong> - Maximum Impulse [dB(A)]
-            </span>
+      {/* Summary boxes */}
+      <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-4">
+        {/* Daytime summary */}
+        {daytimeData.length > 0 && (
+          <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+            <h4 className="font-semibold text-yellow-900 mb-2">☀️ Denní doba (6:00-22:00)</h4>
+            <div className="text-sm text-yellow-800 space-y-1">
+              <div className="flex justify-between">
+                <span>Počet impulsů:</span>
+                <span className="font-bold">{daytimeData.length}</span>
+              </div>
+              <div className="flex justify-between">
+                <span>Průměr LAeq korigovaný:</span>
+                <span className="font-bold">{avgDaytimeLAeqCorrected.toFixed(1)} dB(A)</span>
+              </div>
+            </div>
           </div>
-          <div className="flex items-center gap-2">
-            <div className="w-12 h-1 bg-blue-500 rounded"></div>
-            <span className="text-gray-700">
-              <strong>L<sub>ASmax</sub></strong> - Maximum Slow [dB(A)]
-            </span>
+        )}
+
+        {/* Nighttime summary */}
+        {nighttimeData.length > 0 && (
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+            <h4 className="font-semibold text-blue-900 mb-2">🌙 Noční doba (22:00-6:00)</h4>
+            <div className="text-sm text-blue-800 space-y-1">
+              <div className="flex justify-between">
+                <span>Počet impulsů:</span>
+                <span className="font-bold">{nighttimeData.length}</span>
+              </div>
+              <div className="flex justify-between">
+                <span>Průměr LAeq korigovaný:</span>
+                <span className="font-bold">{avgNighttimeLAeqCorrected.toFixed(1)} dB(A)</span>
+              </div>
+            </div>
           </div>
-          <div className="flex items-center gap-2">
-            <div className="w-12 h-1 bg-green-500 rounded"></div>
-            <span className="text-gray-700">
-              <strong>L<sub>Aeq</sub></strong> - Ekvivalentní hladina [dB(A)]
-            </span>
-          </div>
-          <div className="flex items-center gap-2">
-            <div className="w-3 h-3 bg-red-600 rounded-full border-2 border-red-900"></div>
-            <span className="text-gray-700">💥 Vysoce impulsní (rozdíl {'>'} 5 dB)</span>
-          </div>
-        </div>
-        <div className="mt-3 p-3 bg-blue-50 border border-blue-200 rounded">
-          <p className="text-xs text-blue-900">
-            <strong>ℹ️ Identifikace:</strong> Pokud je rozdíl LAImax - LASmax {'>'} 5 dB,
-            hluk je vysoce impulsní (označeno větším červeným bodem s tmavším okrajem).
-            Pro tyto události se aplikuje korekce -12 dB k hygienickému limitu.
-          </p>
-        </div>
+        )}
+      </div>
+
+      {/* Legend */}
+      <div className="mt-4 p-3 bg-gray-50 rounded-lg">
+        <p className="text-xs text-gray-700">
+          <strong>Legenda:</strong> <span className="inline-block w-3 h-3 bg-green-500 rounded-full border border-green-700 mx-1"></span> Denní doba •
+          <span className="inline-block w-3 h-3 bg-blue-500 rounded-full border border-blue-700 mx-1"></span> Noční doba •
+          Čárované linie = průměry pro den/noc
+        </p>
       </div>
     </div>
   );
