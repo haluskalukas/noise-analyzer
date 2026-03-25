@@ -2,7 +2,7 @@
 
 import { useRef } from 'react';
 import * as XLSX from 'xlsx';
-import { ImpulseData } from '@/app/impulzni-hluk/page';
+import { MeasurementData, ImpulseData } from '@/app/impulzni-hluk/page';
 
 interface ImpulseFileUploadProps {
   onDataLoaded: (data: ImpulseData[], fileName: string) => void;
@@ -11,6 +11,38 @@ interface ImpulseFileUploadProps {
 export default function ImpulseFileUpload({ onDataLoaded }: ImpulseFileUploadProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  /**
+   * Logaritmický průměr dvou hodnot v dB
+   */
+  const logAverage = (dB1: number, dB2: number): number => {
+    const p1 = Math.pow(10, dB1 / 10);
+    const p2 = Math.pow(10, dB2 / 10);
+    return 10 * Math.log10((p1 + p2) / 2);
+  };
+
+  /**
+   * Energetické odečtení pozadí od signálu
+   */
+  const subtractBackground = (signalDb: number, backgroundDb: number): number => {
+    const signalPower = Math.pow(10, signalDb / 10);
+    const backgroundPower = Math.pow(10, backgroundDb / 10);
+
+    if (signalPower <= backgroundPower) {
+      return signalDb; // Nemůžeme odečíst, vrátíme původní hodnotu
+    }
+
+    const correctedPower = signalPower - backgroundPower;
+    return 10 * Math.log10(correctedPower);
+  };
+
+  /**
+   * Zjistí, zda je čas ve dne (6:00-22:00)
+   */
+  const isDaytime = (date: Date): boolean => {
+    const hours = date.getHours();
+    return hours >= 6 && hours < 22;
+  };
+
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
@@ -18,10 +50,11 @@ export default function ImpulseFileUpload({ onDataLoaded }: ImpulseFileUploadPro
     try {
       const arrayBuffer = await file.arrayBuffer();
       const workbook = XLSX.read(arrayBuffer);
-      const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
-      const jsonData = XLSX.utils.sheet_to_json(firstSheet);
+      const worksheet = workbook.Sheets[workbook.SheetNames[0]];
+      const jsonData = XLSX.utils.sheet_to_json(worksheet);
 
-      const parsedData: ImpulseData[] = jsonData.map((row: any) => {
+      // Parsovat všechna měření (1s data)
+      const measurements: MeasurementData[] = jsonData.map((row: any) => {
         // Parse timestamp
         let timestamp: Date;
         if (row['Datum a čas'] || row['Datum a cas']) {
@@ -37,65 +70,90 @@ export default function ImpulseFileUpload({ onDataLoaded }: ImpulseFileUploadPro
           timestamp = new Date();
         }
 
-        // Parse LAImax (REQUIRED)
+        // Parse LAeq (v tomto pořadí: LAeq, LAImax, LASmax)
+        const lAeq = parseFloat(
+          row['LAeq'] || row['LAEq'] || row['L Aeq'] || row['Aeq'] || row['Leq'] || '0'
+        );
+
+        // Parse LAImax
         const lAImax = parseFloat(
           row['LAImax'] || row['LAIMax'] || row['L AImax'] || row['AImax'] || '0'
         );
 
-        // Parse LASmax (REQUIRED)
+        // Parse LASmax
         const lASmax = parseFloat(
           row['LASmax'] || row['LASMax'] || row['L ASmax'] || row['ASmax'] || '0'
         );
 
-        // Parse LAeq (REQUIRED) - already corrected by the measurement device
-        const lAeq = parseFloat(
-          row['LAeq'] || row['LAEq'] || row['L Aeq'] || row['Aeq'] || '0'
-        );
-
-        // Calculate if highly impulsive
-        const difference = lAImax - lASmax;
-        const isHighlyImpulsive = difference > 5.0;
-
-        // Parse optional fields
-        const duration = row['Délka'] || row['Delka'] || row['Duration'] || row['Trvání'] || row['Trvani']
-          ? parseFloat(row['Délka'] || row['Delka'] || row['Duration'] || row['Trvání'] || row['Trvani'])
-          : undefined;
-
-        const source = row['Zdroj'] || row['Source'] || row['Typ'] || row['Type'] || undefined;
-
         return {
           timestamp,
+          lAeq,
           lAImax,
           lASmax,
-          lAeq,
-          duration,
-          source,
-          isHighlyImpulsive,
         };
       });
 
-      // Filter out invalid data (missing required fields)
-      const validData = parsedData.filter(
-        (d) => !isNaN(d.lAImax) && d.lAImax > 0 &&
-               !isNaN(d.lASmax) && d.lASmax > 0 &&
-               !isNaN(d.lAeq) && d.lAeq > 0
+      // Filtrovat platná data
+      const validMeasurements = measurements.filter(
+        (m) => !isNaN(m.lAeq) && m.lAeq > 0 &&
+               !isNaN(m.lAImax) && m.lAImax > 0 &&
+               !isNaN(m.lASmax) && m.lASmax > 0
       );
 
-      if (validData.length === 0) {
-        alert('Soubor neobsahuje platná data.\n\nPožadované sloupce:\n- LAImax\n- LASmax\n- LAeq\n\nZkontrolujte formát souboru.');
+      if (validMeasurements.length === 0) {
+        alert('Soubor neobsahuje platná data.\n\nPožadované sloupce:\n- Datum a čas\n- LAeq\n- LAImax\n- LASmax\n\nZkontrolujte formát souboru.');
         return;
       }
 
-      // Show summary
-      const highlyImpulsiveCount = validData.filter(d => d.isHighlyImpulsive).length;
+      // Identifikovat impulsy (LAImax - LASmax > 5 dB)
+      const impulses: ImpulseData[] = [];
 
-      console.log(`Načteno ${validData.length} impulzů:`);
-      console.log(`- ${highlyImpulsiveCount} vysoce impulsních (LAImax - LASmax > 5 dB)`);
+      for (let i = 0; i < validMeasurements.length; i++) {
+        const current = validMeasurements[i];
+        const difference = current.lAImax - current.lASmax;
 
-      onDataLoaded(validData, file.name);
+        // Je to impuls?
+        if (difference > 5.0) {
+          // Získat LAeq 1s před a po
+          const before = i > 0 ? validMeasurements[i - 1].lAeq : current.lAeq;
+          const after = i < validMeasurements.length - 1 ? validMeasurements[i + 1].lAeq : current.lAeq;
+
+          // Spočítat průměr pozadí (logaritmický)
+          const background = logAverage(before, after);
+
+          // Korigovat LAeq na pozadí
+          const corrected = subtractBackground(current.lAeq, background);
+
+          impulses.push({
+            timestamp: current.timestamp,
+            lAeq: current.lAeq,
+            lAImax: current.lAImax,
+            lASmax: current.lASmax,
+            difference: difference,
+            lAeqBefore: before,
+            lAeqAfter: after,
+            lAeqBackground: background,
+            lAeqCorrected: corrected,
+            isHighlyImpulsive: true, // Všechny nalezené impulsy mají rozdíl > 5 dB
+            isDaytime: isDaytime(current.timestamp),
+          });
+        }
+      }
+
+      if (impulses.length === 0) {
+        alert(`Nebyly nalezeny žádné impulsy!\n\nZ ${validMeasurements.length} měření nevyhovuje žádné kritériu LAImax - LASmax > 5 dB.`);
+        return;
+      }
+
+      console.log(`Analyzováno ${validMeasurements.length} měření:`);
+      console.log(`- Nalezeno ${impulses.length} impulsů (${((impulses.length / validMeasurements.length) * 100).toFixed(1)}%)`);
+      console.log(`- Denní doba: ${impulses.filter(i => i.isDaytime).length} impulsů`);
+      console.log(`- Noční doba: ${impulses.filter(i => !i.isDaytime).length} impulsů`);
+
+      onDataLoaded(impulses, file.name);
     } catch (error) {
       console.error('Error parsing file:', error);
-      alert('Chyba při načítání souboru.\n\nZkontrolujte:\n1. Formát souboru (Excel/CSV)\n2. Názvy sloupců (LAImax, LASmax, LAeq)\n3. Číselné hodnoty v dB');
+      alert('Chyba při načítání souboru.\n\nZkontrolujte:\n1. Formát souboru (Excel/CSV)\n2. Názvy sloupců (LAeq, LAImax, LASmax)\n3. Číselné hodnoty v dB');
     }
 
     // Reset file input
@@ -110,15 +168,16 @@ export default function ImpulseFileUpload({ onDataLoaded }: ImpulseFileUploadPro
       return new Date((dateStr - 25569) * 86400 * 1000);
     }
     const str = String(dateStr);
-    const czechMatch = str.match(/(\d{1,2})\.(\d{1,2})\.(\d{4})\s+(\d{1,2}):(\d{2})/);
+    const czechMatch = str.match(/(\d{1,2})\.(\d{1,2})\.(\d{4})\s+(\d{1,2}):(\d{2}):?(\d{2})?/);
     if (czechMatch) {
-      const [, day, month, year, hour, minute] = czechMatch;
+      const [, day, month, year, hour, minute, second] = czechMatch;
       return new Date(
         parseInt(year),
         parseInt(month) - 1,
         parseInt(day),
         parseInt(hour),
-        parseInt(minute)
+        parseInt(minute),
+        parseInt(second || '0')
       );
     }
     const isoDate = new Date(str);
@@ -134,10 +193,10 @@ export default function ImpulseFileUpload({ onDataLoaded }: ImpulseFileUploadPro
         <div className="text-center">
           <div className="text-6xl mb-4">💥</div>
           <h2 className="text-2xl font-bold text-gray-800 mb-2">
-            Nahrát data vysoce impulsního hluku
+            Nahrát kontinuální měření
           </h2>
           <p className="text-gray-600 mb-6">
-            Excel nebo CSV soubor s měřeními podle NV 272/2011 Sb.
+            Excel nebo CSV soubor s 1sekundovými daty (LAeq, LAImax, LASmax)
           </p>
 
           <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 hover:border-blue-500 transition-colors">
@@ -184,22 +243,17 @@ export default function ImpulseFileUpload({ onDataLoaded }: ImpulseFileUploadPro
               📋 Požadovaný formát souboru:
             </h3>
             <div className="text-sm text-blue-800 space-y-2">
-              <p className="font-medium">Povinné sloupce:</p>
+              <p className="font-medium">Povinné sloupce (v tomto pořadí):</p>
               <ul className="list-disc list-inside space-y-1 ml-4">
                 <li><strong>Datum a čas</strong> nebo <strong>Datum</strong> + <strong>Čas</strong></li>
+                <li><strong>LAeq</strong> - Ekvivalentní hladina [dB(A)]</li>
                 <li><strong>LAImax</strong> - Maximum s Impulse charakteristikou [dB(A)]</li>
                 <li><strong>LASmax</strong> - Maximum se Slow charakteristikou [dB(A)]</li>
-                <li><strong>LAeq</strong> - Ekvivalentní hladina impulzu [dB(A)] - již korigováno měřicím přístrojem</li>
-              </ul>
-
-              <p className="font-medium mt-4">Volitelné sloupce:</p>
-              <ul className="list-disc list-inside space-y-1 ml-4">
-                <li><strong>Délka</strong> - Délka impulzu [ms]</li>
-                <li><strong>Zdroj</strong> - Popis zdroje impulzu</li>
               </ul>
 
               <p className="text-xs text-blue-700 mt-3 italic">
-                <strong>Poznámka:</strong> LAeq musí být korigováno na zbytkový hluk měřicím přístrojem (průměr 1s před a po impulsu).
+                <strong>Poznámka:</strong> Modul automaticky identifikuje impulsy (LAImax - LASmax {'>'} 5 dB)
+                a pro každý impuls provede korekci LAeq na průměr pozadí 1s před a po impulsu.
               </p>
             </div>
 
@@ -212,30 +266,36 @@ export default function ImpulseFileUpload({ onDataLoaded }: ImpulseFileUploadPro
                   <thead>
                     <tr className="border-b border-gray-300">
                       <th className="text-left py-1 px-2">Datum a čas</th>
+                      <th className="text-left py-1 px-2">LAeq</th>
                       <th className="text-left py-1 px-2">LAImax</th>
                       <th className="text-left py-1 px-2">LASmax</th>
-                      <th className="text-left py-1 px-2">LAeq</th>
-                      <th className="text-left py-1 px-2">Zdroj</th>
                     </tr>
                   </thead>
                   <tbody>
-                    <tr>
-                      <td className="py-1 px-2">14.3.2024 10:15</td>
-                      <td className="py-1 px-2">118.5</td>
-                      <td className="py-1 px-2">105.2</td>
-                      <td className="py-1 px-2">98.3</td>
-                      <td className="py-1 px-2">Výstřel</td>
+                    <tr className="bg-gray-50">
+                      <td className="py-1 px-2">14.3.2024 10:14:59</td>
+                      <td className="py-1 px-2">45.2</td>
+                      <td className="py-1 px-2">52.1</td>
+                      <td className="py-1 px-2">48.3</td>
                     </tr>
-                    <tr>
-                      <td className="py-1 px-2">14.3.2024 10:47</td>
-                      <td className="py-1 px-2">122.1</td>
-                      <td className="py-1 px-2">108.5</td>
-                      <td className="py-1 px-2">102.8</td>
-                      <td className="py-1 px-2">Výstřel</td>
+                    <tr className="bg-red-50">
+                      <td className="py-1 px-2">14.3.2024 10:15:00</td>
+                      <td className="py-1 px-2">98.3</td>
+                      <td className="py-1 px-2 font-bold text-red-600">118.5</td>
+                      <td className="py-1 px-2">105.2</td>
+                    </tr>
+                    <tr className="bg-gray-50">
+                      <td className="py-1 px-2">14.3.2024 10:15:01</td>
+                      <td className="py-1 px-2">46.1</td>
+                      <td className="py-1 px-2">53.4</td>
+                      <td className="py-1 px-2">49.1</td>
                     </tr>
                   </tbody>
                 </table>
               </div>
+              <p className="text-xs text-gray-600 mt-2">
+                <span className="bg-red-50 px-1 rounded">Červeně</span> = impuls (LAImax - LASmax = 13.3 dB {'>'} 5 dB)
+              </p>
             </div>
           </div>
         </div>

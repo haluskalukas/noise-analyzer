@@ -7,14 +7,27 @@ import ImpulseChart from '@/components/ImpulseChart';
 import ImpulseStatistics from '@/components/ImpulseStatistics';
 import ImpulseTable from '@/components/ImpulseTable';
 
-export interface ImpulseData {
+// Data z 1sekundového měření
+export interface MeasurementData {
   timestamp: Date;
+  lAeq: number;         // dB(A) - Ekvivalentní hladina
   lAImax: number;       // dB(A) - Maximum s Impulse charakteristikou
   lASmax: number;       // dB(A) - Maximum se Slow charakteristikou
-  lAeq: number;         // dB(A) - Ekvivalentní hladina impulzu (již korigováno měřicím přístrojem)
-  duration?: number;    // ms - Délka impulzu
-  source?: string;      // Zdroj impulzu
-  isHighlyImpulsive?: boolean; // Automaticky vypočítáno: LAImax - LASmax > 5 dB
+}
+
+// Identifikovaný impuls s korekcí na pozadí
+export interface ImpulseData {
+  timestamp: Date;
+  lAeq: number;         // dB(A) - Ekvivalentní hladina impulzu (nekorigovaná)
+  lAImax: number;       // dB(A) - Maximum s Impulse charakteristikou
+  lASmax: number;       // dB(A) - Maximum se Slow charakteristikou
+  difference: number;   // dB - Rozdíl LAImax - LASmax
+  lAeqBefore: number;   // dB(A) - LAeq 1s před impulsem
+  lAeqAfter: number;    // dB(A) - LAeq 1s po impulsu
+  lAeqBackground: number; // dB(A) - Průměr pozadí (logaritmický)
+  lAeqCorrected: number;  // dB(A) - LAeq korigovaný na pozadí
+  isHighlyImpulsive: boolean; // LAImax - LASmax > 5 dB
+  isDaytime: boolean;   // Je to ve dne (6:00-22:00)?
 }
 
 export default function ImpulseNoisePage() {
@@ -117,7 +130,7 @@ export default function ImpulseNoisePage() {
                     📄 {fileName}
                   </h3>
                   <p className="text-sm text-gray-600">
-                    {data.length} impulzních událostí • {data.filter(d => d.isHighlyImpulsive).length} vysoce impulsních
+                    {data.length} impulzů • {data.filter(d => d.isHighlyImpulsive).length} vysoce impulsních
                   </p>
                 </div>
                 <button
