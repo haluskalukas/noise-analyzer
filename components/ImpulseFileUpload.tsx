@@ -62,16 +62,16 @@ export default function ImpulseFileUpload({ onDataLoaded }: ImpulseFileUploadPro
           const dateStr = row['Datum a čas'] || row['Datum a cas'];
           timestamp = parseExcelDate(dateStr);
         }
-        // Varianta 2: "Datum" a "Čas" v oddělených sloupcích
-        else if (row['Datum'] && (row['Čas'] || row['Cas'])) {
+        // Varianta 2: "Datum" a "Čas" v oddělených sloupcích (české názvy)
+        else if (row['Datum'] && (row['Čas'] || row['Cas'] || row['čas'])) {
           const dateValue = row['Datum'];
-          const timeValue = row['Čas'] || row['Cas'];
+          const timeValue = row['Čas'] || row['Cas'] || row['čas'];
           timestamp = parseSeparateDateAndTime(dateValue, timeValue);
         }
-        // Varianta 3: "Datum" a "čas" (malé písmeno)
-        else if (row['Datum'] && row['čas']) {
-          const dateValue = row['Datum'];
-          const timeValue = row['čas'];
+        // Varianta 3: "date" a "time" v oddělených sloupcích (anglické názvy)
+        else if (row['date'] && row['time']) {
+          const dateValue = row['date'];
+          const timeValue = row['time'];
           timestamp = parseSeparateDateAndTime(dateValue, timeValue);
         }
         // Fallback
@@ -79,19 +79,22 @@ export default function ImpulseFileUpload({ onDataLoaded }: ImpulseFileUploadPro
           timestamp = new Date();
         }
 
-        // Parse LAeq (v tomto pořadí: LAeq, LAImax, LASmax)
+        // Parse LAeq (české i anglické varianty)
         const lAeq = parseFloat(
-          row['LAeq'] || row['LAEq'] || row['L Aeq'] || row['Aeq'] || row['Leq'] || '0'
+          row['LAeq'] || row['LAEq'] || row['L Aeq'] || row['Aeq'] || row['Leq'] ||
+          row['Laeq'] || row['laeq'] || '0'
         );
 
-        // Parse LAImax
+        // Parse LAImax (české i anglické varianty)
         const lAImax = parseFloat(
-          row['LAImax'] || row['LAIMax'] || row['L AImax'] || row['AImax'] || '0'
+          row['LAImax'] || row['LAIMax'] || row['L AImax'] || row['AImax'] ||
+          row['LaIMAX'] || row['LAIMAX'] || row['laimax'] || '0'
         );
 
-        // Parse LASmax
+        // Parse LASmax (české i anglické varianty)
         const lASmax = parseFloat(
-          row['LASmax'] || row['LASMax'] || row['L ASmax'] || row['ASmax'] || '0'
+          row['LASmax'] || row['LASMax'] || row['L ASmax'] || row['ASmax'] ||
+          row['LASMAX'] || row['lasmax'] || '0'
         );
 
         return {
@@ -335,14 +338,14 @@ export default function ImpulseFileUpload({ onDataLoaded }: ImpulseFileUploadPro
             <div className="text-sm text-blue-800 space-y-2">
               <p className="font-medium">Povinné sloupce:</p>
               <ul className="list-disc list-inside space-y-1 ml-4">
-                <li><strong>Datum</strong> - Datum měření (DD.MM.YYYY nebo Excel formát)</li>
-                <li><strong>Čas</strong> - Čas měření (HH:MM:SS nebo HH:MM nebo Excel formát)</li>
-                <li><strong>LAeq</strong> - Ekvivalentní hladina [dB(A)]</li>
-                <li><strong>LAImax</strong> - Maximum s Impulse charakteristikou [dB(A)]</li>
-                <li><strong>LASmax</strong> - Maximum se Slow charakteristikou [dB(A)]</li>
+                <li><strong>Datum</strong> nebo <strong>date</strong> - Datum měření (DD.MM.YYYY nebo Excel formát)</li>
+                <li><strong>Čas</strong> nebo <strong>time</strong> - Čas měření (HH:MM:SS nebo HH:MM nebo Excel formát)</li>
+                <li><strong>LAeq</strong> nebo <strong>Laeq</strong> - Ekvivalentní hladina [dB(A)]</li>
+                <li><strong>LAImax</strong> nebo <strong>LaIMAX</strong> - Maximum s Impulse charakteristikou [dB(A)]</li>
+                <li><strong>LASmax</strong> nebo <strong>LASMAX</strong> - Maximum se Slow charakteristikou [dB(A)]</li>
               </ul>
               <p className="text-xs text-blue-700 mt-2 italic">
-                <strong>Alternativa:</strong> Místo oddělených sloupců můžete použít jeden sloupec <strong>"Datum a čas"</strong>.
+                <strong>Poznámka:</strong> Podporovány jsou české i anglické názvy sloupců. Místo oddělených sloupců můžete použít jeden sloupec <strong>"Datum a čas"</strong>.
               </p>
 
               <p className="text-xs text-blue-700 mt-3 italic">
