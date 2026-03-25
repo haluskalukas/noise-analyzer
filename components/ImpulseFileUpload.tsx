@@ -56,16 +56,26 @@ export default function ImpulseFileUpload({ onDataLoaded }: ImpulseFileUploadPro
       const measurements: MeasurementData[] = jsonData.map((row: any) => {
         // Parse timestamp
         let timestamp: Date;
+
+        // Varianta 1: "Datum a čas" v jednom sloupci
         if (row['Datum a čas'] || row['Datum a cas']) {
           const dateStr = row['Datum a čas'] || row['Datum a cas'];
           timestamp = parseExcelDate(dateStr);
-        } else if (row['Datum'] && row['Čas']) {
-          const dateStr = `${row['Datum']} ${row['Čas']}`;
-          timestamp = parseExcelDate(dateStr);
-        } else if (row['Datum'] && row['Cas']) {
-          const dateStr = `${row['Datum']} ${row['Cas']}`;
-          timestamp = parseExcelDate(dateStr);
-        } else {
+        }
+        // Varianta 2: "Datum" a "Čas" v oddělených sloupcích
+        else if (row['Datum'] && (row['Čas'] || row['Cas'])) {
+          const dateValue = row['Datum'];
+          const timeValue = row['Čas'] || row['Cas'];
+          timestamp = parseSeparateDateAndTime(dateValue, timeValue);
+        }
+        // Varianta 3: "Datum" a "čas" (malé písmeno)
+        else if (row['Datum'] && row['čas']) {
+          const dateValue = row['Datum'];
+          const timeValue = row['čas'];
+          timestamp = parseSeparateDateAndTime(dateValue, timeValue);
+        }
+        // Fallback
+        else {
           timestamp = new Date();
         }
 
@@ -188,6 +198,50 @@ export default function ImpulseFileUpload({ onDataLoaded }: ImpulseFileUploadPro
     }
   };
 
+  const parseSeparateDateAndTime = (dateValue: any, timeValue: any): Date => {
+    // Parse date
+    let date: Date;
+    if (dateValue instanceof Date) {
+      date = dateValue;
+    } else if (typeof dateValue === 'number') {
+      // Excel serial number for date
+      date = new Date((dateValue - 25569) * 86400 * 1000);
+    } else {
+      // Try to parse as string (e.g., "14.3.2024" or "14/3/2024")
+      const dateStr = String(dateValue);
+      const czechDateMatch = dateStr.match(/(\d{1,2})\.(\d{1,2})\.(\d{4})/);
+      if (czechDateMatch) {
+        const [, day, month, year] = czechDateMatch;
+        date = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
+      } else {
+        date = new Date(dateStr);
+      }
+    }
+
+    // Parse time
+    let hours = 0, minutes = 0, seconds = 0;
+    if (typeof timeValue === 'number') {
+      // Excel time is a fraction of a day (e.g., 0.5 = 12:00)
+      const totalSeconds = Math.round(timeValue * 86400);
+      hours = Math.floor(totalSeconds / 3600);
+      minutes = Math.floor((totalSeconds % 3600) / 60);
+      seconds = totalSeconds % 60;
+    } else {
+      // Parse as string (e.g., "10:15:30" or "10:15")
+      const timeStr = String(timeValue);
+      const timeMatch = timeStr.match(/(\d{1,2}):(\d{2}):?(\d{2})?/);
+      if (timeMatch) {
+        hours = parseInt(timeMatch[1]);
+        minutes = parseInt(timeMatch[2]);
+        seconds = parseInt(timeMatch[3] || '0');
+      }
+    }
+
+    // Combine date and time
+    date.setHours(hours, minutes, seconds, 0);
+    return date;
+  };
+
   const parseExcelDate = (dateStr: any): Date => {
     if (dateStr instanceof Date) return dateStr;
     if (typeof dateStr === 'number') {
@@ -279,13 +333,17 @@ export default function ImpulseFileUpload({ onDataLoaded }: ImpulseFileUploadPro
               📋 Požadovaný formát souboru:
             </h3>
             <div className="text-sm text-blue-800 space-y-2">
-              <p className="font-medium">Povinné sloupce (v tomto pořadí):</p>
+              <p className="font-medium">Povinné sloupce:</p>
               <ul className="list-disc list-inside space-y-1 ml-4">
-                <li><strong>Datum a čas</strong> nebo <strong>Datum</strong> + <strong>Čas</strong></li>
+                <li><strong>Datum</strong> - Datum měření (DD.MM.YYYY nebo Excel formát)</li>
+                <li><strong>Čas</strong> - Čas měření (HH:MM:SS nebo HH:MM nebo Excel formát)</li>
                 <li><strong>LAeq</strong> - Ekvivalentní hladina [dB(A)]</li>
                 <li><strong>LAImax</strong> - Maximum s Impulse charakteristikou [dB(A)]</li>
                 <li><strong>LASmax</strong> - Maximum se Slow charakteristikou [dB(A)]</li>
               </ul>
+              <p className="text-xs text-blue-700 mt-2 italic">
+                <strong>Alternativa:</strong> Místo oddělených sloupců můžete použít jeden sloupec <strong>"Datum a čas"</strong>.
+              </p>
 
               <p className="text-xs text-blue-700 mt-3 italic">
                 <strong>Poznámka:</strong> Modul automaticky identifikuje impulsy (LAImax - LASmax {'>'} 5 dB)
@@ -301,7 +359,8 @@ export default function ImpulseFileUpload({ onDataLoaded }: ImpulseFileUploadPro
                 <table className="text-xs font-mono w-full">
                   <thead>
                     <tr className="border-b border-gray-300">
-                      <th className="text-left py-1 px-2">Datum a čas</th>
+                      <th className="text-left py-1 px-2">Datum</th>
+                      <th className="text-left py-1 px-2">Čas</th>
                       <th className="text-left py-1 px-2">LAeq</th>
                       <th className="text-left py-1 px-2">LAImax</th>
                       <th className="text-left py-1 px-2">LASmax</th>
@@ -309,19 +368,22 @@ export default function ImpulseFileUpload({ onDataLoaded }: ImpulseFileUploadPro
                   </thead>
                   <tbody>
                     <tr className="bg-gray-50">
-                      <td className="py-1 px-2">14.3.2024 10:14:59</td>
+                      <td className="py-1 px-2">14.3.2024</td>
+                      <td className="py-1 px-2">10:14:59</td>
                       <td className="py-1 px-2">45.2</td>
                       <td className="py-1 px-2">52.1</td>
                       <td className="py-1 px-2">48.3</td>
                     </tr>
                     <tr className="bg-red-50">
-                      <td className="py-1 px-2">14.3.2024 10:15:00</td>
+                      <td className="py-1 px-2">14.3.2024</td>
+                      <td className="py-1 px-2">10:15:00</td>
                       <td className="py-1 px-2">98.3</td>
                       <td className="py-1 px-2 font-bold text-red-600">118.5</td>
                       <td className="py-1 px-2">105.2</td>
                     </tr>
                     <tr className="bg-gray-50">
-                      <td className="py-1 px-2">14.3.2024 10:15:01</td>
+                      <td className="py-1 px-2">14.3.2024</td>
+                      <td className="py-1 px-2">10:15:01</td>
                       <td className="py-1 px-2">46.1</td>
                       <td className="py-1 px-2">53.4</td>
                       <td className="py-1 px-2">49.1</td>
