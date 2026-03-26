@@ -15,9 +15,9 @@ export function TrainTable({ trains, onUpdateTrain, onDeleteTrain }: TrainTableP
     const wb = XLSX.utils.book_new();
 
     const data = [
-      ['Železniční doprava - hluk', '', '', '', '', '', '', ''],
-      ['', '', '', '', '', '', '', ''],
-      ['Čas', 'Trakce', 'Druh vlaku', 'Počet vozů', 'Směr', 'LAeq (dB)', 'Čas průjezdu (s)', 'LAE (dB)'],
+      ['Železniční doprava - hluk', '', '', '', '', '', '', '', ''],
+      ['', '', '', '', '', '', '', '', ''],
+      ['Čas', 'Trakce', 'Druh vlaku', 'Počet vozů', 'Směr', 'Poznámka', 'LAeq (dB)', 'Čas průjezdu (s)', 'LAE (dB)'],
     ];
 
     trains.forEach(train => {
@@ -30,6 +30,7 @@ export function TrainTable({ trains, onUpdateTrain, onDeleteTrain }: TrainTableP
         train.druhVlaku,
         train.pocetVozu,
         train.smer,
+        train.poznamka,
         formatNumber(train.laeq),
         formatNumber(train.casPrujezdu),
         formatNumber(train.lae),
@@ -91,6 +92,9 @@ export function TrainTable({ trains, onUpdateTrain, onDeleteTrain }: TrainTableP
                   Směr
                 </th>
                 <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Poznámka
+                </th>
+                <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   L<sub>Aeq</sub> (dB)
                 </th>
                 <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -149,6 +153,15 @@ export function TrainTable({ trains, onUpdateTrain, onDeleteTrain }: TrainTableP
                       value={train.smer}
                       onChange={(e) => onUpdateTrain(train.id, 'smer', e.target.value)}
                       placeholder="např. Praha → Brno"
+                      className="w-full px-2 py-1 border border-gray-300 rounded text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    />
+                  </td>
+                  <td className="px-3 py-3">
+                    <input
+                      type="text"
+                      value={train.poznamka}
+                      onChange={(e) => onUpdateTrain(train.id, 'poznamka', e.target.value)}
+                      placeholder="např. odbočka, zpoždění"
                       className="w-full px-2 py-1 border border-gray-300 rounded text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                     />
                   </td>

@@ -132,6 +132,7 @@ export default function ZeleznicniDopravaHluk() {
       druhVlaku: '',
       pocetVozu: '',
       smer: '',
+      poznamka: '',
       laeq,
       casPrujezdu: durationSeconds,
       lae,
