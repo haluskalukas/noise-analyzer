@@ -1,6 +1,6 @@
 'use client';
 
-import { FrequencyMeasurement, RoomParameters } from '@/app/nepruzvucnost/page';
+import { FrequencyMeasurement, RoomParameters, calculateWeightedIndex, FrequencyResult } from '@/app/nepruzvucnost/page';
 import * as XLSX from 'xlsx';
 
 interface SoundInsulationResultsProps {
@@ -55,6 +55,17 @@ export default function SoundInsulationResults({
   const avgDnT = results.reduce((sum, r) => sum + r.DnT, 0) / results.length;
   const avgT = results.reduce((sum, r) => sum + r.T, 0) / results.length;
 
+  // Vypočítat vážené indexy
+  const resultsForCalc: FrequencyResult[] = results.map(r => ({ ...r }));
+  const Rw = calculateWeightedIndex(resultsForCalc);
+
+  // Pro DnT,w použijeme stejný algoritmus, ale s DnT hodnotami
+  const resultsForDnT: FrequencyResult[] = results.map(r => ({
+    ...r,
+    R: r.DnT  // Použijeme DnT místo R pro výpočet
+  }));
+  const DnTw = calculateWeightedIndex(resultsForDnT);
+
   // Export do Excel
   const handleExportExcel = () => {
     const exportData = results.map((r) => ({
@@ -100,6 +111,45 @@ export default function SoundInsulationResults({
 
   return (
     <div className="space-y-6">
+      {/* Weighted Index Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {/* R'w */}
+        <div className="bg-gradient-to-br from-blue-600 to-blue-700 rounded-lg shadow-lg p-6 border-2 border-blue-800 text-white">
+          <div className="flex items-center justify-between mb-2">
+            <h3 className="text-sm font-semibold">
+              Vážená stavební neprůzvučnost
+            </h3>
+            <span className="text-3xl">⭐</span>
+          </div>
+          <div className="text-5xl font-bold">
+            {Rw.value} <span className="text-2xl">dB</span>
+          </div>
+          <p className="text-sm mt-2 opacity-90">R'w (ISO 717-1)</p>
+          <div className="mt-3 pt-3 border-t border-blue-500 text-xs opacity-75">
+            <p>Posun křivky: {Rw.shift > 0 ? '+' : ''}{Rw.shift} dB</p>
+            <p>Nepříznivé odchylky: {Rw.unfavorableDeviations.toFixed(1)} dB</p>
+          </div>
+        </div>
+
+        {/* DnT,w */}
+        <div className="bg-gradient-to-br from-emerald-600 to-emerald-700 rounded-lg shadow-lg p-6 border-2 border-emerald-800 text-white">
+          <div className="flex items-center justify-between mb-2">
+            <h3 className="text-sm font-semibold">
+              Vážený normovaný rozdíl hladin
+            </h3>
+            <span className="text-3xl">⭐</span>
+          </div>
+          <div className="text-5xl font-bold">
+            {DnTw.value} <span className="text-2xl">dB</span>
+          </div>
+          <p className="text-sm mt-2 opacity-90">DnT,w (ISO 717-1)</p>
+          <div className="mt-3 pt-3 border-t border-emerald-500 text-xs opacity-75">
+            <p>Posun křivky: {DnTw.shift > 0 ? '+' : ''}{DnTw.shift} dB</p>
+            <p>Nepříznivé odchylky: {DnTw.unfavorableDeviations.toFixed(1)} dB</p>
+          </div>
+        </div>
+      </div>
+
       {/* Summary Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         {/* Average R' */}

@@ -1,11 +1,12 @@
 'use client';
 
 import { useRef, useEffect, useState } from 'react';
-import { FrequencyMeasurement, RoomParameters } from '@/app/nepruzvucnost/page';
+import { FrequencyMeasurement, RoomParameters, REFERENCE_CURVE, calculateWeightedIndex, FrequencyResult } from '@/app/nepruzvucnost/page';
 
 interface SoundInsulationChartProps {
   measurements: FrequencyMeasurement[];
   roomParams: RoomParameters;
+  shift?: number; // Volitelný manuální posun křivky pro demonstraci
 }
 
 interface CalculatedResult {
@@ -15,12 +16,13 @@ interface CalculatedResult {
   DnT: number;  // Normovaný rozdíl hladin [dB]
 }
 
-export default function SoundInsulationChart({ measurements, roomParams }: SoundInsulationChartProps) {
+export default function SoundInsulationChart({ measurements, roomParams, shift }: SoundInsulationChartProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [hoveredPoint, setHoveredPoint] = useState<{ x: number; y: number; data: string } | null>(null);
   const [visibleLines, setVisibleLines] = useState({
     R: true,
     DnT: true,
+    reference: true,
   });
 
   // Výpočet A, R', DnT
@@ -194,6 +196,52 @@ export default function SoundInsulationChart({ measurements, roomParams }: Sound
     // Draw DnT line
     drawLine(results, 'DnT', '#10b981', 'DnT');
 
+    // Draw reference curve
+    if (visibleLines.reference) {
+      // Vypočítat optimální posun pokud není zadán manuálně
+      const resultsForCalc: FrequencyResult[] = results.map(r => ({
+        ...r,
+        L1: 0,
+        L2: 0,
+        T: 0,
+        A: r.A
+      }));
+      const weightedIndex = calculateWeightedIndex(resultsForCalc);
+      const curveShift = shift !== undefined ? shift : weightedIndex.shift;
+
+      ctx.strokeStyle = '#ef4444';
+      ctx.lineWidth = 2;
+      ctx.setLineDash([5, 5]); // Čárkovaná čára
+      ctx.beginPath();
+
+      const refFrequencies = Object.keys(REFERENCE_CURVE).map(Number).sort((a, b) => a - b);
+      refFrequencies.forEach((freq, i) => {
+        const refValue = REFERENCE_CURVE[freq] + curveShift;
+        const x = freqToX(freq);
+        const y = dbToY(refValue);
+
+        if (i === 0) {
+          ctx.moveTo(x, y);
+        } else {
+          ctx.lineTo(x, y);
+        }
+      });
+
+      ctx.stroke();
+      ctx.setLineDash([]); // Reset na plnou čáru
+
+      // Draw reference points (menší body)
+      ctx.fillStyle = '#ef4444';
+      refFrequencies.forEach((freq) => {
+        const refValue = REFERENCE_CURVE[freq] + curveShift;
+        const x = freqToX(freq);
+        const y = dbToY(refValue);
+        ctx.beginPath();
+        ctx.arc(x, y, 2.5, 0, 2 * Math.PI);
+        ctx.fill();
+      });
+    }
+
     // Legend
     const legendX = width - padding.right - 100;
     const legendY = padding.top + 20;
@@ -206,6 +254,7 @@ export default function SoundInsulationChart({ measurements, roomParams }: Sound
     const legendItems = [
       { key: 'R' as const, color: '#3b82f6', label: "R' - Stavební neprůzvučnost" },
       { key: 'DnT' as const, color: '#10b981', label: "DnT - Normovaný rozdíl hladin" },
+      { key: 'reference' as const, color: '#ef4444', label: "Referenční křivka ISO 717-1" },
     ];
 
     legendItems.forEach((item, i) => {
@@ -241,7 +290,7 @@ export default function SoundInsulationChart({ measurements, roomParams }: Sound
     const legendY = padding.top + 20;
     const lineHeight = 25;
 
-    const legendItems: Array<'R' | 'DnT'> = ['R', 'DnT'];
+    const legendItems: Array<'R' | 'DnT' | 'reference'> = ['R', 'DnT', 'reference'];
 
     legendItems.forEach((key, i) => {
       const itemY = legendY + i * lineHeight;
@@ -349,6 +398,16 @@ export default function SoundInsulationChart({ measurements, roomParams }: Sound
             }`}
           >
             DnT
+          </button>
+          <button
+            onClick={() => setVisibleLines((prev) => ({ ...prev, reference: !prev.reference }))}
+            className={`px-3 py-1 rounded text-sm font-medium transition-colors ${
+              visibleLines.reference
+                ? 'bg-red-100 text-red-700 border-2 border-red-500'
+                : 'bg-gray-100 text-gray-500 border-2 border-gray-300'
+            }`}
+          >
+            ISO 717-1
           </button>
         </div>
       </div>

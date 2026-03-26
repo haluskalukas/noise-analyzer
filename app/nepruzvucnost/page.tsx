@@ -12,6 +12,27 @@ export const STANDARD_FREQUENCIES = [
   1250, 1600, 2000, 2500, 3150
 ];
 
+// Referenční křivka pro vzduchovou neprůzvučnost podle ČSN EN ISO 717-1
+// Hodnoty R'ref pro frekvence 100-3150 Hz
+export const REFERENCE_CURVE: Record<number, number> = {
+  100: 33,
+  125: 36,
+  160: 39,
+  200: 42,
+  250: 45,
+  315: 48,
+  400: 51,
+  500: 52,
+  630: 53,
+  800: 54,
+  1000: 55,
+  1250: 56,
+  1600: 56,
+  2000: 56,
+  2500: 56,
+  3150: 56
+};
+
 // Měřená data pro jednu frekvenci
 export interface FrequencyMeasurement {
   frequency: number;  // Hz
@@ -31,6 +52,92 @@ export interface FrequencyResult extends FrequencyMeasurement {
 export interface RoomParameters {
   volume: number;     // m³ - Objem přijímací místnosti
   area: number;       // m² - Plocha měřené konstrukce
+}
+
+// Vážený index neprůzvučnosti
+export interface WeightedIndex {
+  value: number;           // dB - Vážená hodnota (R'w nebo DnT,w)
+  shift: number;           // dB - Posun referenční křivky
+  unfavorableDeviations: number; // dB - Součet nepříznivých odchylek
+  C: number;               // dB - Adaptační člen C (spektrum 1)
+  Ctr: number;             // dB - Adaptační člen Ctr (spektrum 2)
+}
+
+// Funkce pro výpočet váženého indexu podle ČSN EN ISO 717-1
+export function calculateWeightedIndex(results: FrequencyResult[]): WeightedIndex {
+  // Zjistit, zda máme všechny standardní frekvence
+  const hasAllFrequencies = STANDARD_FREQUENCIES.every(freq =>
+    results.some(r => r.frequency === freq)
+  );
+
+  if (!hasAllFrequencies) {
+    // Pokud nemáme všechny frekvence, vrátit nulové hodnoty
+    return { value: 0, shift: 0, unfavorableDeviations: 0, C: 0, Ctr: 0 };
+  }
+
+  // Seřadit výsledky podle frekvence a použít R' hodnoty
+  const sortedResults = [...results].sort((a, b) => a.frequency - b.frequency);
+
+  // Najít optimální posun referenční křivky
+  let optimalShift = 0;
+  let found = false;
+
+  // Začneme s posunem 0 a postupně zvyšujeme
+  for (let shift = -10; shift <= 80; shift++) {
+    let sumUnfavorable = 0;
+
+    // Spočítat součet nepříznivých odchylek pro tento posun
+    sortedResults.forEach(result => {
+      const refValue = REFERENCE_CURVE[result.frequency];
+      if (refValue !== undefined) {
+        const shiftedRef = refValue + shift;
+        const deviation = shiftedRef - result.R;
+
+        // Započítáme pouze kladné odchylky (kde křivka je nad měřením)
+        if (deviation > 0) {
+          sumUnfavorable += deviation;
+        }
+      }
+    });
+
+    // Pokud součet nepříznivých odchylek nepřekračuje 32 dB, pokračujeme
+    if (sumUnfavorable <= 32.0) {
+      optimalShift = shift;
+    } else {
+      // Jakmile překročíme 32 dB, zastavíme
+      found = true;
+      break;
+    }
+  }
+
+  // Vážená hodnota je hodnota referenční křivky na 500 Hz po posunu
+  const weightedValue = REFERENCE_CURVE[500] + optimalShift;
+
+  // Spočítat finální součet nepříznivých odchylek
+  let finalUnfavorable = 0;
+  sortedResults.forEach(result => {
+    const refValue = REFERENCE_CURVE[result.frequency];
+    if (refValue !== undefined) {
+      const shiftedRef = refValue + optimalShift;
+      const deviation = shiftedRef - result.R;
+      if (deviation > 0) {
+        finalUnfavorable += deviation;
+      }
+    }
+  });
+
+  // TODO: Výpočet adaptačních členů C a Ctr (vyžaduje spektrální korekce)
+  // Pro nyní nastavíme na 0
+  const C = 0;
+  const Ctr = 0;
+
+  return {
+    value: weightedValue,
+    shift: optimalShift,
+    unfavorableDeviations: finalUnfavorable,
+    C,
+    Ctr
+  };
 }
 
 export default function SoundInsulationPage() {
