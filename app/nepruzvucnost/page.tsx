@@ -130,48 +130,56 @@ export function calculateWeightedIndex(results: FrequencyResult[]): WeightedInde
   // C - pro spektrum A (růžový hluk, např. obytné budovy)
   // Ctr - pro spektrum B (dopravní hluk s nízkými frekvencemi)
 
-  // Spektrum A (100-3150 Hz) - normalizované na 0 dB
+  // Spektrální adaptační hodnoty podle ISO 717-1, Tabulka 1
+  // Tyto hodnoty jsou relativní korekce pro každou frekvenci
   const spectrumA: Record<number, number> = {
     100: -29.0, 125: -26.2, 160: -23.2, 200: -20.4, 250: -17.6,
     315: -14.9, 400: -12.4, 500: -10.0, 630: -7.8, 800: -5.6,
     1000: -3.6, 1250: -1.8, 1600: 0.0, 2000: 1.6, 2500: 3.0, 3150: 4.2
   };
 
-  // Spektrum B (100-3150 Hz) - dopravní hluk - normalizované na 0 dB
   const spectrumB: Record<number, number> = {
     100: -14.1, 125: -10.8, 160: -7.7, 200: -4.9, 250: -2.5,
     315: -0.4, 400: 1.3, 500: 2.5, 630: 3.4, 800: 4.0,
     1000: 4.4, 1250: 4.5, 1600: 4.4, 2000: 4.2, 2500: 3.7, 3150: 3.0
   };
 
-  // Funkce pro výpočet adaptačního členu podle ISO 717-1, oddíl 5
+  // Funkce pro výpočet adaptačního členu podle ISO 717-1, Annex A
   const calculateAdaptationTerm = (spectrum: Record<number, number>): number => {
-    // Podle ISO 717-1:
-    // C = LAi - Rw (nebo C = LAi - DnT,w)
-    // Kde: LAi = -10 × log₁₀(Σ 10^((Li - Ri)/10))
-    // Li = spektrální hladina zdroje hluku [dB]
-    // Ri = měřená izolace na frekvenci i [dB]
+    // Podle ISO 717-1, vzorec A.1:
+    // C = -10 × log₁₀(Σ 10^((Lj - Rj - C)/10))
+    // Kde Lj jsou spektrální hodnoty + 100 dB (normalizace)
+    // Řešíme iterativně nebo aproximací
 
-    let sumTransmission = 0;
+    // Aproximace: použijeme C = 0 pro první iteraci
+    let C_prev = 0;
+    let C_current = 0;
 
-    sortedResults.forEach(result => {
-      const Li = spectrum[result.frequency]; // Spektrální hladina zdroje
-      if (Li !== undefined) {
-        // Transmise: 10^((Li - Ri)/10) - kolik energie projde
-        const transmission = Math.pow(10, (Li - result.R) / 10);
-        sumTransmission += transmission;
+    // Iterace pro řešení implicitní rovnice (max 10 iterací)
+    for (let iter = 0; iter < 10; iter++) {
+      let sum = 0;
+
+      sortedResults.forEach(result => {
+        const Lj = spectrum[result.frequency]; // Spektrální hodnota (relativní)
+        if (Lj !== undefined) {
+          // Výpočet podle vzorce s aktuální hodnotou C
+          const exponent = (Lj - result.R - C_prev) / 10;
+          sum += Math.pow(10, exponent);
+        }
+      });
+
+      C_current = -10 * Math.log10(sum);
+
+      // Kontrola konvergence
+      if (Math.abs(C_current - C_prev) < 0.01) {
+        break;
       }
-    });
 
-    // LAi = -10 × log₁₀(suma) - Mínus je klíčové!
-    // Toto je izolace proti danému spektru
-    const LAi = -10 * Math.log10(sumTransmission);
-
-    // Adaptační člen = LAi - R'w
-    const adaptationTerm = LAi - weightedValue;
+      C_prev = C_current;
+    }
 
     // Zaokrouhlit na celé dB
-    return Math.round(adaptationTerm);
+    return Math.round(C_current);
   };
 
   const C = calculateAdaptationTerm(spectrumA);
