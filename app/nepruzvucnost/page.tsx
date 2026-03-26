@@ -144,22 +144,28 @@ export function calculateWeightedIndex(results: FrequencyResult[]): WeightedInde
     1000: 4.4, 1250: 4.5, 1600: 4.4, 2000: 4.2, 2500: 3.7, 3150: 3.0
   };
 
-  // Funkce pro výpočet adaptačního členu
+  // Funkce pro výpočet adaptačního členu podle ISO 717-1, oddíl 5
   const calculateAdaptationTerm = (spectrum: Record<number, number>): number => {
-    // Pro každou frekvenci: Lspec = Lspectrum + R (nebo DnT)
-    let sumPowers = 0;
+    // Podle ISO 717-1:
+    // C = LAi - Rw (nebo C = LAi - DnT,w)
+    // Kde: LAi = -10 × log₁₀(Σ 10^((Li - Ri)/10))
+    // Li = spektrální hladina zdroje hluku [dB]
+    // Ri = měřená izolace na frekvenci i [dB]
+
+    let sumTransmission = 0;
 
     sortedResults.forEach(result => {
-      const spectrumValue = spectrum[result.frequency];
-      if (spectrumValue !== undefined) {
-        // L = spektrum_hodnota - R (rozdíl hladin)
-        const L = spectrumValue - result.R;
-        sumPowers += Math.pow(10, L / 10);
+      const Li = spectrum[result.frequency]; // Spektrální hladina zdroje
+      if (Li !== undefined) {
+        // Transmise: 10^((Li - Ri)/10) - kolik energie projde
+        const transmission = Math.pow(10, (Li - result.R) / 10);
+        sumTransmission += transmission;
       }
     });
 
-    // LAi = 10 * log(suma) - energetický průměr
-    const LAi = 10 * Math.log10(sumPowers);
+    // LAi = -10 × log₁₀(suma) - Mínus je klíčové!
+    // Toto je izolace proti danému spektru
+    const LAi = -10 * Math.log10(sumTransmission);
 
     // Adaptační člen = LAi - R'w
     const adaptationTerm = LAi - weightedValue;
