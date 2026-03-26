@@ -78,11 +78,12 @@ export function calculateWeightedIndex(results: FrequencyResult[]): WeightedInde
   // Seřadit výsledky podle frekvence a použít R' hodnoty
   const sortedResults = [...results].sort((a, b) => a.frequency - b.frequency);
 
-  // Najít optimální posun referenční křivky
-  let optimalShift = 0;
-  let found = false;
+  // Najít optimální posun referenční křivky podle ISO 717-1
+  // Křivka se posunuje NAHORU, dokud součet nepříznivých odchylek nepřekročí 32,0 dB
+  // Nepříznivá odchylka = kde měřená hodnota je POD referenční křivkou
+  let optimalShift = -10; // Začneme nízko
 
-  // Začneme s posunem 0 a postupně zvyšujeme
+  // Testujeme posuny od -10 do +80 dB a hledáme maximum, kde součet ≤ 32 dB
   for (let shift = -10; shift <= 80; shift++) {
     let sumUnfavorable = 0;
 
@@ -93,19 +94,18 @@ export function calculateWeightedIndex(results: FrequencyResult[]): WeightedInde
         const shiftedRef = refValue + shift;
         const deviation = shiftedRef - result.R;
 
-        // Započítáme pouze kladné odchylky (kde křivka je nad měřením)
+        // Nepříznivá odchylka = kde referenční křivka je NAD měřením (měření je horší)
         if (deviation > 0) {
           sumUnfavorable += deviation;
         }
       }
     });
 
-    // Pokud součet nepříznivých odchylek nepřekračuje 32 dB, pokračujeme
+    // Pokud součet nepříznivých odchylek nepřekračuje 32,0 dB, tento posun je platný
     if (sumUnfavorable <= 32.0) {
-      optimalShift = shift;
+      optimalShift = shift; // Ukládáme nejvyšší platný posun
     } else {
-      // Jakmile překročíme 32 dB, zastavíme
-      found = true;
+      // Jakmile překročíme 32 dB, vyšší posuny už nebudou platné
       break;
     }
   }
