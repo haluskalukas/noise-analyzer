@@ -58,6 +58,14 @@ export default function Home() {
       available: true,
     },
     {
+      id: 'nepruzvucnost',
+      title: 'Neprůzvučnost',
+      description: 'Vyhodnocení vzduchové neprůzvučnosti podle ČSN EN ISO 16283-1',
+      icon: '🔇',
+      color: 'from-cyan-500 to-cyan-600',
+      available: true,
+    },
+    {
       id: 'pracovni-prostredi-hluk',
       title: 'Pracovní prostředí - hluk',
       description: 'Měření a analýza hluku v pracovním prostředí',
