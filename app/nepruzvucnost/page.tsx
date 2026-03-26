@@ -126,10 +126,50 @@ export function calculateWeightedIndex(results: FrequencyResult[]): WeightedInde
     }
   });
 
-  // TODO: Výpočet adaptačních členů C a Ctr (vyžaduje spektrální korekce)
-  // Pro nyní nastavíme na 0
-  const C = 0;
-  const Ctr = 0;
+  // Výpočet adaptačních členů C a Ctr podle ISO 717-1
+  // C - pro spektrum A (růžový hluk, např. obytné budovy)
+  // Ctr - pro spektrum B (dopravní hluk s nízkými frekvencemi)
+
+  // Spektrum A (100-3150 Hz) - normalizované na 0 dB
+  const spectrumA: Record<number, number> = {
+    100: -29.0, 125: -26.2, 160: -23.2, 200: -20.4, 250: -17.6,
+    315: -14.9, 400: -12.4, 500: -10.0, 630: -7.8, 800: -5.6,
+    1000: -3.6, 1250: -1.8, 1600: 0.0, 2000: 1.6, 2500: 3.0, 3150: 4.2
+  };
+
+  // Spektrum B (100-3150 Hz) - dopravní hluk - normalizované na 0 dB
+  const spectrumB: Record<number, number> = {
+    100: -14.1, 125: -10.8, 160: -7.7, 200: -4.9, 250: -2.5,
+    315: -0.4, 400: 1.3, 500: 2.5, 630: 3.4, 800: 4.0,
+    1000: 4.4, 1250: 4.5, 1600: 4.4, 2000: 4.2, 2500: 3.7, 3150: 3.0
+  };
+
+  // Funkce pro výpočet adaptačního členu
+  const calculateAdaptationTerm = (spectrum: Record<number, number>): number => {
+    // Pro každou frekvenci: Lspec = Lspectrum + R (nebo DnT)
+    let sumPowers = 0;
+
+    sortedResults.forEach(result => {
+      const spectrumValue = spectrum[result.frequency];
+      if (spectrumValue !== undefined) {
+        // L = spektrum_hodnota - R (rozdíl hladin)
+        const L = spectrumValue - result.R;
+        sumPowers += Math.pow(10, L / 10);
+      }
+    });
+
+    // LAi = 10 * log(suma) - energetický průměr
+    const LAi = 10 * Math.log10(sumPowers);
+
+    // Adaptační člen = LAi - R'w
+    const adaptationTerm = LAi - weightedValue;
+
+    // Zaokrouhlit na celé dB
+    return Math.round(adaptationTerm);
+  };
+
+  const C = calculateAdaptationTerm(spectrumA);
+  const Ctr = calculateAdaptationTerm(spectrumB);
 
   return {
     value: weightedValue,

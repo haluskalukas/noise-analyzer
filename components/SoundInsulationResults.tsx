@@ -128,6 +128,7 @@ export default function SoundInsulationResults({
           <div className="mt-3 pt-3 border-t border-blue-500 text-xs opacity-75">
             <p>Posun křivky: {Rw.shift > 0 ? '+' : ''}{Rw.shift} dB</p>
             <p>Nepříznivé odchylky: {Rw.unfavorableDeviations.toFixed(1)} dB</p>
+            <p className="mt-2 font-semibold">R'w (C; Ctr) = {Rw.value} ({Rw.C >= 0 ? '+' : ''}{Rw.C}; {Rw.Ctr >= 0 ? '+' : ''}{Rw.Ctr}) dB</p>
           </div>
         </div>
 
@@ -146,6 +147,7 @@ export default function SoundInsulationResults({
           <div className="mt-3 pt-3 border-t border-emerald-500 text-xs opacity-75">
             <p>Posun křivky: {DnTw.shift > 0 ? '+' : ''}{DnTw.shift} dB</p>
             <p>Nepříznivé odchylky: {DnTw.unfavorableDeviations.toFixed(1)} dB</p>
+            <p className="mt-2 font-semibold">DnT,w (C; Ctr) = {DnTw.value} ({DnTw.C >= 0 ? '+' : ''}{DnTw.C}; {DnTw.Ctr >= 0 ? '+' : ''}{DnTw.Ctr}) dB</p>
           </div>
         </div>
       </div>
@@ -304,6 +306,15 @@ export default function SoundInsulationResults({
             </li>
             <li>
               <strong>DnT</strong> - Normovaný rozdíl hladin: DnT = L1 - L2 + 10 × log(T/0.5) [dB]
+            </li>
+            <li>
+              <strong>R'w / DnT,w</strong> - Vážená jednočíselná hodnota podle ISO 717-1 [dB]
+            </li>
+            <li>
+              <strong>C</strong> - Adaptační člen pro spektrum A (růžový hluk, obytné budovy) [dB]
+            </li>
+            <li>
+              <strong>Ctr</strong> - Adaptační člen pro spektrum B (dopravní hluk s nízkými frekvencemi) [dB]
             </li>
           </ul>
         </div>
