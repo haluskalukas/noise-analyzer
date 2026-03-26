@@ -287,19 +287,21 @@ export default function SoundInsulationFileUpload({ onDataLoaded }: SoundInsulat
                   <thead>
                     <tr className="border-b border-gray-300">
                       <th className="text-left py-1 px-2 bg-gray-100">Veličina</th>
-                      <th className="text-left py-1 px-2">50 Hz</th>
-                      <th className="text-left py-1 px-2">63 Hz</th>
-                      <th className="text-left py-1 px-2">80 Hz</th>
+                      <th className="text-left py-1 px-2">100 Hz</th>
+                      <th className="text-left py-1 px-2">125 Hz</th>
+                      <th className="text-left py-1 px-2">160 Hz</th>
                       <th className="text-left py-1 px-2">...</th>
+                      <th className="text-left py-1 px-2">3150 Hz</th>
                     </tr>
                   </thead>
                   <tbody>
                     <tr className="bg-gray-50">
                       <td className="py-1 px-2 font-semibold">Frekvence</td>
-                      <td className="py-1 px-2">50</td>
-                      <td className="py-1 px-2">63</td>
-                      <td className="py-1 px-2">80</td>
+                      <td className="py-1 px-2">100</td>
+                      <td className="py-1 px-2">125</td>
+                      <td className="py-1 px-2">160</td>
                       <td className="py-1 px-2">...</td>
+                      <td className="py-1 px-2">3150</td>
                     </tr>
                     <tr className="bg-white">
                       <td className="py-1 px-2 font-semibold">L1</td>
@@ -307,6 +309,7 @@ export default function SoundInsulationFileUpload({ onDataLoaded }: SoundInsulat
                       <td className="py-1 px-2">87,5</td>
                       <td className="py-1 px-2">89,1</td>
                       <td className="py-1 px-2">...</td>
+                      <td className="py-1 px-2">78,3</td>
                     </tr>
                     <tr className="bg-gray-50">
                       <td className="py-1 px-2 font-semibold">L2</td>
@@ -314,6 +317,7 @@ export default function SoundInsulationFileUpload({ onDataLoaded }: SoundInsulat
                       <td className="py-1 px-2">43,8</td>
                       <td className="py-1 px-2">45,2</td>
                       <td className="py-1 px-2">...</td>
+                      <td className="py-1 px-2">35,6</td>
                     </tr>
                     <tr className="bg-white">
                       <td className="py-1 px-2 font-semibold">T</td>
@@ -321,6 +325,7 @@ export default function SoundInsulationFileUpload({ onDataLoaded }: SoundInsulat
                       <td className="py-1 px-2">0,75</td>
                       <td className="py-1 px-2">0,72</td>
                       <td className="py-1 px-2">...</td>
+                      <td className="py-1 px-2">0,55</td>
                     </tr>
                   </tbody>
                 </table>
@@ -341,7 +346,7 @@ export default function SoundInsulationFileUpload({ onDataLoaded }: SoundInsulat
 
             <p className="text-xs text-blue-700 mt-3 italic">
               <strong>Poznámka:</strong> Podporovány jsou desetinné čárky i tečky.
-              Standardní rozsah: 50-5000 Hz (tercová pásma podle ČSN EN ISO 16283-1).
+              Standardní rozsah: 100-3150 Hz (tercová pásma podle ČSN EN ISO 717-1 pro hodnocení).
             </p>
           </div>
         </div>

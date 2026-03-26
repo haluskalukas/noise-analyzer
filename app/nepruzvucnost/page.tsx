@@ -6,10 +6,10 @@ import SoundInsulationFileUpload from '@/components/SoundInsulationFileUpload';
 import SoundInsulationChart from '@/components/SoundInsulationChart';
 import SoundInsulationResults from '@/components/SoundInsulationResults';
 
-// Standardní tercové frekvence pro stavební akustiku (50 Hz - 5000 Hz)
+// Standardní tercové frekvence pro stavební akustiku (100 Hz - 3150 Hz podle ČSN EN ISO 717-1)
 export const STANDARD_FREQUENCIES = [
-  50, 63, 80, 100, 125, 160, 200, 250, 315, 400, 500, 630, 800, 1000,
-  1250, 1600, 2000, 2500, 3150, 4000, 5000
+  100, 125, 160, 200, 250, 315, 400, 500, 630, 800, 1000,
+  1250, 1600, 2000, 2500, 3150
 ];
 
 // Měřená data pro jednu frekvenci
