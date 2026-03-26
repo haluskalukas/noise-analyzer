@@ -127,8 +127,7 @@ export default function SoundInsulationResults({
           <p className="text-sm mt-2 opacity-90">R'w (ISO 717-1)</p>
           <div className="mt-3 pt-3 border-t border-blue-500 text-xs opacity-75">
             <p>Posun křivky: {Rw.shift > 0 ? '+' : ''}{Rw.shift} dB</p>
-            <p>Nepříznivé odchylky: {Rw.unfavorableDeviations.toFixed(1)} dB</p>
-            <p className="mt-2 font-semibold">R'w (C; Ctr) = {Rw.value} ({Rw.C >= 0 ? '+' : ''}{Rw.C}; {Rw.Ctr >= 0 ? '+' : ''}{Rw.Ctr}) dB</p>
+            <p>Nepříznivé odchylky: {Rw.unfavorableDeviations.toFixed(1).replace('.', ',')} dB</p>
           </div>
         </div>
 
@@ -146,8 +145,7 @@ export default function SoundInsulationResults({
           <p className="text-sm mt-2 opacity-90">DnT,w (ISO 717-1)</p>
           <div className="mt-3 pt-3 border-t border-emerald-500 text-xs opacity-75">
             <p>Posun křivky: {DnTw.shift > 0 ? '+' : ''}{DnTw.shift} dB</p>
-            <p>Nepříznivé odchylky: {DnTw.unfavorableDeviations.toFixed(1)} dB</p>
-            <p className="mt-2 font-semibold">DnT,w (C; Ctr) = {DnTw.value} ({DnTw.C >= 0 ? '+' : ''}{DnTw.C}; {DnTw.Ctr >= 0 ? '+' : ''}{DnTw.Ctr}) dB</p>
+            <p>Nepříznivé odchylky: {DnTw.unfavorableDeviations.toFixed(1).replace('.', ',')} dB</p>
           </div>
         </div>
       </div>
@@ -163,7 +161,7 @@ export default function SoundInsulationResults({
             <span className="text-2xl">🔊</span>
           </div>
           <div className="text-3xl font-bold text-blue-700">
-            {avgR.toFixed(1)} <span className="text-xl">dB</span>
+            {avgR.toFixed(1).replace('.', ',')} <span className="text-xl">dB</span>
           </div>
           <p className="text-xs text-blue-600 mt-1">R' průměr</p>
         </div>
@@ -177,7 +175,7 @@ export default function SoundInsulationResults({
             <span className="text-2xl">📉</span>
           </div>
           <div className="text-3xl font-bold text-emerald-700">
-            {avgDnT.toFixed(1)} <span className="text-xl">dB</span>
+            {avgDnT.toFixed(1).replace('.', ',')} <span className="text-xl">dB</span>
           </div>
           <p className="text-xs text-emerald-600 mt-1">DnT průměr</p>
         </div>
@@ -191,7 +189,7 @@ export default function SoundInsulationResults({
             <span className="text-2xl">⏱️</span>
           </div>
           <div className="text-3xl font-bold text-purple-700">
-            {avgT.toFixed(2)} <span className="text-xl">s</span>
+            {avgT.toFixed(2).replace('.', ',')} <span className="text-xl">s</span>
           </div>
           <p className="text-xs text-purple-600 mt-1">T průměr</p>
         </div>
@@ -250,22 +248,22 @@ export default function SoundInsulationResults({
                     {result.frequency}
                   </td>
                   <td className="px-4 py-3 text-gray-700">
-                    {result.L1.toFixed(1)}
+                    {result.L1.toFixed(1).replace('.', ',')}
                   </td>
                   <td className="px-4 py-3 text-gray-700">
-                    {result.L2.toFixed(1)}
+                    {result.L2.toFixed(1).replace('.', ',')}
                   </td>
                   <td className="px-4 py-3 text-gray-700">
-                    {result.T.toFixed(2)}
+                    {result.T.toFixed(2).replace('.', ',')}
                   </td>
                   <td className="px-4 py-3 text-gray-700">
-                    {result.A.toFixed(2)}
+                    {result.A.toFixed(2).replace('.', ',')}
                   </td>
                   <td className="px-4 py-3 font-semibold text-blue-700 bg-blue-50">
-                    {result.R.toFixed(1)}
+                    {result.R.toFixed(1).replace('.', ',')}
                   </td>
                   <td className="px-4 py-3 font-semibold text-emerald-700 bg-emerald-50">
-                    {result.DnT.toFixed(1)}
+                    {result.DnT.toFixed(1).replace('.', ',')}
                   </td>
                 </tr>
               ))}
@@ -276,10 +274,10 @@ export default function SoundInsulationResults({
                   Průměr
                 </td>
                 <td className="px-4 py-3 text-blue-700 bg-blue-100">
-                  {avgR.toFixed(1)}
+                  {avgR.toFixed(1).replace('.', ',')}
                 </td>
                 <td className="px-4 py-3 text-emerald-700 bg-emerald-100">
-                  {avgDnT.toFixed(1)}
+                  {avgDnT.toFixed(1).replace('.', ',')}
                 </td>
               </tr>
             </tfoot>
@@ -309,12 +307,6 @@ export default function SoundInsulationResults({
             </li>
             <li>
               <strong>R'w / DnT,w</strong> - Vážená jednočíselná hodnota podle ISO 717-1 [dB]
-            </li>
-            <li>
-              <strong>C</strong> - Adaptační člen pro spektrum A (růžový hluk, obytné budovy) [dB]
-            </li>
-            <li>
-              <strong>Ctr</strong> - Adaptační člen pro spektrum B (dopravní hluk s nízkými frekvencemi) [dB]
             </li>
           </ul>
         </div>
