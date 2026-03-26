@@ -33,68 +33,141 @@ export default function SoundInsulationFileUpload({ onDataLoaded }: SoundInsulat
       const arrayBuffer = await file.arrayBuffer();
       const workbook = XLSX.read(arrayBuffer);
       const worksheet = workbook.Sheets[workbook.SheetNames[0]];
+
+      // Parsování jako JSON s prvním sloupcem jako header
       const jsonData = XLSX.utils.sheet_to_json(worksheet);
 
-      const measurements: FrequencyMeasurement[] = jsonData.map((row: any) => {
-        // Parse frequency
-        const frequency = parseNumber(
-          row['Frekvence'] || row['Frekvence [Hz]'] || row['frequency'] ||
-          row['Frequency'] || row['f'] || '0'
-        );
+      if (jsonData.length === 0) {
+        alert('Soubor je prázdný nebo nemá správný formát.');
+        return;
+      }
 
-        // Parse L1 (sending room level)
-        const L1 = parseNumber(
-          row['L1'] || row['L1 [dB]'] || row['L1 dB'] ||
-          row['Vysílací'] || row['Vysilaci'] || '0'
-        );
+      // Detekce formátu - transponovaný (řádky) nebo klasický (sloupce)
+      const firstRow: any = jsonData[0];
+      const keys = Object.keys(firstRow);
 
-        // Parse L2 (receiving room level)
-        const L2 = parseNumber(
-          row['L2'] || row['L2 [dB]'] || row['L2 dB'] ||
-          row['Přijímací'] || row['Prijimaci'] || '0'
-        );
-
-        // Parse T (reverberation time)
-        const T = parseNumber(
-          row['T'] || row['T [s]'] || row['T s'] ||
-          row['Doba dozvuku'] || row['RT'] || '0'
-        );
-
-        return { frequency, L1, L2, T };
-      });
-
-      // Filter valid measurements
-      const validMeasurements = measurements.filter(
-        (m) => m.frequency > 0 && m.L1 > 0 && m.L2 > 0 && m.T > 0
+      // Pokud první řádek má klíče s čísly nebo názvem Frekvence, je to transponovaný formát
+      const isTransposed = keys.some(k =>
+        !isNaN(parseNumber(k)) ||
+        k.toLowerCase().includes('frekvence') ||
+        k.toLowerCase().includes('frequency')
       );
 
-      if (validMeasurements.length === 0) {
+      let measurements: FrequencyMeasurement[] = [];
+
+      if (isTransposed) {
+        // TRANSPONOVANÝ FORMÁT - Frekvence v řádcích
+        console.log('Detekován transponovaný formát (frekvence v řádcích)');
+
+        // Najít řádky s jednotlivými veličinami
+        let freqRow: any = null;
+        let l1Row: any = null;
+        let l2Row: any = null;
+        let tRow: any = null;
+
+        jsonData.forEach((row: any) => {
+          const firstCell = Object.values(row)[0];
+          const firstCellStr = String(firstCell).toLowerCase().trim();
+
+          if (firstCellStr.includes('frekvence') || firstCellStr.includes('frequency') || firstCellStr === 'f') {
+            freqRow = row;
+          } else if (firstCellStr === 'l1' || firstCellStr.includes('vysílací') || firstCellStr.includes('vysilaci')) {
+            l1Row = row;
+          } else if (firstCellStr === 'l2' || firstCellStr.includes('přijímací') || firstCellStr.includes('prijimaci')) {
+            l2Row = row;
+          } else if (firstCellStr === 't' || firstCellStr.includes('dozvuk')) {
+            tRow = row;
+          }
+        });
+
+        if (!freqRow || !l1Row || !l2Row || !tRow) {
+          alert(
+            'Soubor neobsahuje všechny povinné řádky.\n\n' +
+            'Požadované řádky (v prvním sloupci):\n' +
+            '- Frekvence (nebo frequency, f)\n' +
+            '- L1 (hladina ve vysílací místnosti)\n' +
+            '- L2 (hladina v přijímací místnosti)\n' +
+            '- T (doba dozvuku)\n\n' +
+            'Nalezeno:\n' +
+            `- Frekvence: ${freqRow ? '✓' : '✗'}\n` +
+            `- L1: ${l1Row ? '✓' : '✗'}\n` +
+            `- L2: ${l2Row ? '✓' : '✗'}\n` +
+            `- T: ${tRow ? '✓' : '✗'}`
+          );
+          return;
+        }
+
+        // Získat klíče (názvy sloupců) kromě prvního
+        const columnKeys = Object.keys(freqRow).slice(1);
+
+        // Pro každý sloupec vytvořit měření
+        columnKeys.forEach((key) => {
+          const frequency = parseNumber(freqRow[key]);
+          const L1 = parseNumber(l1Row[key]);
+          const L2 = parseNumber(l2Row[key]);
+          const T = parseNumber(tRow[key]);
+
+          if (frequency > 0 && L1 > 0 && L2 > 0 && T > 0) {
+            measurements.push({ frequency, L1, L2, T });
+          }
+        });
+
+      } else {
+        // KLASICKÝ FORMÁT - Frekvence ve sloupcích
+        console.log('Detekován klasický formát (frekvence ve sloupcích)');
+
+        measurements = jsonData.map((row: any) => {
+          const frequency = parseNumber(
+            row['Frekvence'] || row['Frekvence [Hz]'] || row['frequency'] ||
+            row['Frequency'] || row['f'] || '0'
+          );
+
+          const L1 = parseNumber(
+            row['L1'] || row['L1 [dB]'] || row['L1 dB'] ||
+            row['Vysílací'] || row['Vysilaci'] || '0'
+          );
+
+          const L2 = parseNumber(
+            row['L2'] || row['L2 [dB]'] || row['L2 dB'] ||
+            row['Přijímací'] || row['Prijimaci'] || '0'
+          );
+
+          const T = parseNumber(
+            row['T'] || row['T [s]'] || row['T s'] ||
+            row['Doba dozvuku'] || row['RT'] || '0'
+          );
+
+          return { frequency, L1, L2, T };
+        });
+
+        // Filter valid measurements
+        measurements = measurements.filter(
+          (m) => m.frequency > 0 && m.L1 > 0 && m.L2 > 0 && m.T > 0
+        );
+      }
+
+      if (measurements.length === 0) {
         alert(
           'Soubor neobsahuje platná data.\n\n' +
-          'Požadované sloupce:\n' +
-          '- Frekvence (Hz)\n' +
-          '- L1 (dB) - hladina ve vysílací místnosti\n' +
-          '- L2 (dB) - hladina v přijímací místnosti\n' +
-          '- T (s) - doba dozvuku\n\n' +
-          'Zkontrolujte formát souboru.'
+          'Zkontrolujte formát souboru a hodnoty.'
         );
         return;
       }
 
       // Sort by frequency
-      validMeasurements.sort((a, b) => a.frequency - b.frequency);
+      measurements.sort((a, b) => a.frequency - b.frequency);
 
-      console.log(`Načteno ${validMeasurements.length} měření:`);
-      console.log(`- Frekvence: ${validMeasurements[0].frequency} Hz - ${validMeasurements[validMeasurements.length - 1].frequency} Hz`);
+      console.log(`Načteno ${measurements.length} měření:`);
+      console.log(`- Frekvence: ${measurements[0].frequency} Hz - ${measurements[measurements.length - 1].frequency} Hz`);
 
-      onDataLoaded(validMeasurements, file.name);
+      onDataLoaded(measurements, file.name);
     } catch (error) {
       console.error('Error parsing file:', error);
       alert(
         'Chyba při načítání souboru.\n\n' +
         'Zkontrolujte:\n' +
         '1. Formát souboru (Excel/CSV)\n' +
-        '2. Názvy sloupců (Frekvence, L1, L2, T)\n' +
+        '2. Formát dat (podporovány oba formáty - řádky i sloupce)\n' +
         '3. Číselné hodnoty (desetinné čárky jsou podporovány)'
       );
     }
@@ -200,13 +273,10 @@ export default function SoundInsulationFileUpload({ onDataLoaded }: SoundInsulat
             📋 Požadovaný formát souboru:
           </h3>
           <div className="text-sm text-blue-800 space-y-2">
-            <p className="font-medium">Povinné sloupce:</p>
-            <ul className="list-disc list-inside space-y-1 ml-4">
-              <li><strong>Frekvence</strong> nebo <strong>frequency</strong> - Střední frekvence tercového pásma [Hz]</li>
-              <li><strong>L1</strong> - Hladina akustického tlaku ve vysílací místnosti [dB]</li>
-              <li><strong>L2</strong> - Hladina akustického tlaku v přijímací místnosti [dB]</li>
-              <li><strong>T</strong> - Doba dozvuku v přijímací místnosti [s]</li>
-            </ul>
+            <p className="font-medium">Transponovaný formát (frekvence v řádcích):</p>
+            <p className="text-xs">
+              První sloupec obsahuje názvy veličin, další sloupce obsahují hodnoty pro jednotlivé frekvence.
+            </p>
 
             <div className="mt-4 p-4 bg-white rounded border border-blue-200">
               <p className="text-xs font-mono text-gray-700 mb-2">
@@ -216,39 +286,62 @@ export default function SoundInsulationFileUpload({ onDataLoaded }: SoundInsulat
                 <table className="text-xs font-mono w-full">
                   <thead>
                     <tr className="border-b border-gray-300">
-                      <th className="text-left py-1 px-2">Frekvence [Hz]</th>
-                      <th className="text-left py-1 px-2">L1 [dB]</th>
-                      <th className="text-left py-1 px-2">L2 [dB]</th>
-                      <th className="text-left py-1 px-2">T [s]</th>
+                      <th className="text-left py-1 px-2 bg-gray-100">Veličina</th>
+                      <th className="text-left py-1 px-2">50 Hz</th>
+                      <th className="text-left py-1 px-2">63 Hz</th>
+                      <th className="text-left py-1 px-2">80 Hz</th>
+                      <th className="text-left py-1 px-2">...</th>
                     </tr>
                   </thead>
                   <tbody>
                     <tr className="bg-gray-50">
+                      <td className="py-1 px-2 font-semibold">Frekvence</td>
                       <td className="py-1 px-2">50</td>
-                      <td className="py-1 px-2">85.2</td>
-                      <td className="py-1 px-2">42.1</td>
-                      <td className="py-1 px-2">0.80</td>
+                      <td className="py-1 px-2">63</td>
+                      <td className="py-1 px-2">80</td>
+                      <td className="py-1 px-2">...</td>
                     </tr>
                     <tr className="bg-white">
-                      <td className="py-1 px-2">63</td>
-                      <td className="py-1 px-2">87.5</td>
-                      <td className="py-1 px-2">43.8</td>
-                      <td className="py-1 px-2">0.75</td>
+                      <td className="py-1 px-2 font-semibold">L1</td>
+                      <td className="py-1 px-2">85,2</td>
+                      <td className="py-1 px-2">87,5</td>
+                      <td className="py-1 px-2">89,1</td>
+                      <td className="py-1 px-2">...</td>
                     </tr>
                     <tr className="bg-gray-50">
-                      <td className="py-1 px-2">80</td>
-                      <td className="py-1 px-2">89.1</td>
-                      <td className="py-1 px-2">45.2</td>
-                      <td className="py-1 px-2">0.72</td>
+                      <td className="py-1 px-2 font-semibold">L2</td>
+                      <td className="py-1 px-2">42,1</td>
+                      <td className="py-1 px-2">43,8</td>
+                      <td className="py-1 px-2">45,2</td>
+                      <td className="py-1 px-2">...</td>
+                    </tr>
+                    <tr className="bg-white">
+                      <td className="py-1 px-2 font-semibold">T</td>
+                      <td className="py-1 px-2">0,80</td>
+                      <td className="py-1 px-2">0,75</td>
+                      <td className="py-1 px-2">0,72</td>
+                      <td className="py-1 px-2">...</td>
                     </tr>
                   </tbody>
                 </table>
               </div>
             </div>
 
+            <div className="mt-4 p-3 bg-green-50 rounded border border-green-200">
+              <p className="text-xs text-green-800">
+                <strong>✓ Povinné řádky v prvním sloupci:</strong>
+              </p>
+              <ul className="list-disc list-inside space-y-1 ml-4 text-xs text-green-700 mt-1">
+                <li><strong>Frekvence</strong> (nebo frequency, f) - Tercová pásma [Hz]</li>
+                <li><strong>L1</strong> - Hladina ve vysílací místnosti [dB]</li>
+                <li><strong>L2</strong> - Hladina v přijímací místnosti [dB]</li>
+                <li><strong>T</strong> - Doba dozvuku [s]</li>
+              </ul>
+            </div>
+
             <p className="text-xs text-blue-700 mt-3 italic">
-              <strong>Poznámka:</strong> Standardní rozsah je 50-5000 Hz (tercová pásma podle ČSN EN ISO 16283-1).
-              Můžete použít i kratší rozsah 100-3150 Hz.
+              <strong>Poznámka:</strong> Podporovány jsou desetinné čárky i tečky.
+              Standardní rozsah: 50-5000 Hz (tercová pásma podle ČSN EN ISO 16283-1).
             </p>
           </div>
         </div>
