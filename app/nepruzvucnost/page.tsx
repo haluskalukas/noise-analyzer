@@ -37,21 +37,51 @@ export default function SoundInsulationPage() {
   const [measurements, setMeasurements] = useState<FrequencyMeasurement[]>([]);
   const [roomParams, setRoomParams] = useState<RoomParameters | null>(null);
   const [fileName, setFileName] = useState<string>('');
+  const [showParamsForm, setShowParamsForm] = useState(false);
+  const [volume, setVolume] = useState<string>('');
+  const [area, setArea] = useState<string>('');
 
-  const handleDataLoaded = (
-    data: FrequencyMeasurement[],
-    params: RoomParameters,
-    name: string
-  ) => {
+  // Helper funkce pro parsování čísel s desetinnou čárkou i tečkou
+  const parseNumber = (value: string): number => {
+    if (!value) return 0;
+    // Nahradit čárku tečkou pro parsování
+    const normalized = value.replace(',', '.');
+    return parseFloat(normalized);
+  };
+
+  const handleDataLoaded = (data: FrequencyMeasurement[], name: string) => {
     setMeasurements(data);
-    setRoomParams(params);
     setFileName(name);
+    setShowParamsForm(true);
+  };
+
+  const handleParamsSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+
+    const volumeNum = parseNumber(volume);
+    const areaNum = parseNumber(area);
+
+    if (isNaN(volumeNum) || volumeNum <= 0) {
+      alert('Zadejte platný objem přijímací místnosti (V > 0 m³)');
+      return;
+    }
+
+    if (isNaN(areaNum) || areaNum <= 0) {
+      alert('Zadejte platnou plochu měřené konstrukce (S > 0 m²)');
+      return;
+    }
+
+    setRoomParams({ volume: volumeNum, area: areaNum });
+    setShowParamsForm(false);
   };
 
   const handleReset = () => {
     setMeasurements([]);
     setRoomParams(null);
     setFileName('');
+    setShowParamsForm(false);
+    setVolume('');
+    setArea('');
   };
 
   return (
@@ -83,6 +113,88 @@ export default function SoundInsulationPage() {
           /* Upload Section */
           <div className="max-w-4xl mx-auto">
             <SoundInsulationFileUpload onDataLoaded={handleDataLoaded} />
+          </div>
+        ) : showParamsForm ? (
+          /* Room Parameters Form */
+          <div className="max-w-2xl mx-auto">
+            <div className="bg-white rounded-lg shadow-lg p-8">
+              <div className="text-center mb-6">
+                <div className="text-5xl mb-4">📐</div>
+                <h2 className="text-2xl font-bold text-gray-800 mb-2">
+                  Parametry přijímací místnosti
+                </h2>
+                <p className="text-gray-600">
+                  Soubor "{fileName}" byl úspěšně načten ({measurements.length} frekvencí)
+                </p>
+              </div>
+
+              <form onSubmit={handleParamsSubmit} className="space-y-6">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Objem přijímací místnosti V [m³] <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={volume}
+                    onChange={(e) => setVolume(e.target.value)}
+                    placeholder="např. 45,5 nebo 45.5"
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-cyan-500 focus:border-transparent text-lg"
+                    required
+                    autoFocus
+                  />
+                  <p className="text-xs text-gray-500 mt-1">
+                    Můžete použít desetinnou čárku (,) nebo tečku (.)
+                  </p>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Plocha měřené konstrukce S [m²] <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={area}
+                    onChange={(e) => setArea(e.target.value)}
+                    placeholder="např. 12,5 nebo 12.5"
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-cyan-500 focus:border-transparent text-lg"
+                    required
+                  />
+                  <p className="text-xs text-gray-500 mt-1">
+                    Můžete použít desetinnou čárku (,) nebo tečku (.)
+                  </p>
+                </div>
+
+                <div className="bg-blue-50 rounded-lg p-4">
+                  <h3 className="font-semibold text-blue-900 mb-2 text-sm">
+                    ℹ️ Co jsou tyto parametry?
+                  </h3>
+                  <ul className="text-xs text-blue-800 space-y-1">
+                    <li>
+                      <strong>Objem V:</strong> Celkový objem přijímací místnosti (délka × šířka × výška)
+                    </li>
+                    <li>
+                      <strong>Plocha S:</strong> Plocha měřené konstrukce (např. stěny nebo stropu)
+                    </li>
+                  </ul>
+                </div>
+
+                <div className="flex gap-4">
+                  <button
+                    type="button"
+                    onClick={handleReset}
+                    className="flex-1 px-6 py-3 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors font-medium"
+                  >
+                    ← Zpět
+                  </button>
+                  <button
+                    type="submit"
+                    className="flex-1 px-6 py-3 bg-cyan-500 text-white rounded-lg hover:bg-cyan-600 transition-colors font-medium"
+                  >
+                    Vypočítat výsledky →
+                  </button>
+                </div>
+              </form>
+            </div>
           </div>
         ) : (
           /* Results Section */

@@ -7,7 +7,6 @@ import { FrequencyMeasurement, RoomParameters, STANDARD_FREQUENCIES } from '@/ap
 interface SoundInsulationFileUploadProps {
   onDataLoaded: (
     measurements: FrequencyMeasurement[],
-    roomParams: RoomParameters,
     fileName: string
   ) => void;
 }
@@ -15,24 +14,21 @@ interface SoundInsulationFileUploadProps {
 export default function SoundInsulationFileUpload({ onDataLoaded }: SoundInsulationFileUploadProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [dragActive, setDragActive] = useState(false);
-  const [volume, setVolume] = useState<string>('');
-  const [area, setArea] = useState<string>('');
+
+  // Helper funkce pro parsování čísel s desetinnou čárkou i tečkou
+  const parseNumber = (value: any): number => {
+    if (typeof value === 'number') {
+      return value;
+    }
+    if (typeof value === 'string') {
+      // Nahradit čárku tečkou pro parsování
+      const normalized = value.replace(',', '.');
+      return parseFloat(normalized);
+    }
+    return 0;
+  };
 
   const processFile = async (file: File) => {
-    // Validate room parameters
-    const volumeNum = parseFloat(volume);
-    const areaNum = parseFloat(area);
-
-    if (isNaN(volumeNum) || volumeNum <= 0) {
-      alert('Zadejte platný objem přijímací místnosti (V > 0 m³)');
-      return;
-    }
-
-    if (isNaN(areaNum) || areaNum <= 0) {
-      alert('Zadejte platnou plochu měřené konstrukce (S > 0 m²)');
-      return;
-    }
-
     try {
       const arrayBuffer = await file.arrayBuffer();
       const workbook = XLSX.read(arrayBuffer);
@@ -41,25 +37,25 @@ export default function SoundInsulationFileUpload({ onDataLoaded }: SoundInsulat
 
       const measurements: FrequencyMeasurement[] = jsonData.map((row: any) => {
         // Parse frequency
-        const frequency = parseFloat(
+        const frequency = parseNumber(
           row['Frekvence'] || row['Frekvence [Hz]'] || row['frequency'] ||
           row['Frequency'] || row['f'] || '0'
         );
 
         // Parse L1 (sending room level)
-        const L1 = parseFloat(
+        const L1 = parseNumber(
           row['L1'] || row['L1 [dB]'] || row['L1 dB'] ||
           row['Vysílací'] || row['Vysilaci'] || '0'
         );
 
         // Parse L2 (receiving room level)
-        const L2 = parseFloat(
+        const L2 = parseNumber(
           row['L2'] || row['L2 [dB]'] || row['L2 dB'] ||
           row['Přijímací'] || row['Prijimaci'] || '0'
         );
 
         // Parse T (reverberation time)
-        const T = parseFloat(
+        const T = parseNumber(
           row['T'] || row['T [s]'] || row['T s'] ||
           row['Doba dozvuku'] || row['RT'] || '0'
         );
@@ -91,11 +87,7 @@ export default function SoundInsulationFileUpload({ onDataLoaded }: SoundInsulat
       console.log(`Načteno ${validMeasurements.length} měření:`);
       console.log(`- Frekvence: ${validMeasurements[0].frequency} Hz - ${validMeasurements[validMeasurements.length - 1].frequency} Hz`);
 
-      onDataLoaded(
-        validMeasurements,
-        { volume: volumeNum, area: areaNum },
-        file.name
-      );
+      onDataLoaded(validMeasurements, file.name);
     } catch (error) {
       console.error('Error parsing file:', error);
       alert(
@@ -103,7 +95,7 @@ export default function SoundInsulationFileUpload({ onDataLoaded }: SoundInsulat
         'Zkontrolujte:\n' +
         '1. Formát souboru (Excel/CSV)\n' +
         '2. Názvy sloupců (Frekvence, L1, L2, T)\n' +
-        '3. Číselné hodnoty'
+        '3. Číselné hodnoty (desetinné čárky jsou podporovány)'
       );
     }
   };
@@ -151,38 +143,6 @@ export default function SoundInsulationFileUpload({ onDataLoaded }: SoundInsulat
           <p className="text-gray-600">
             Excel nebo CSV soubor s měřením na tercových pásmech
           </p>
-        </div>
-
-        {/* Room Parameters */}
-        <div className="mb-8 grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Objem přijímací místnosti V [m³] <span className="text-red-500">*</span>
-            </label>
-            <input
-              type="number"
-              step="0.1"
-              min="0"
-              value={volume}
-              onChange={(e) => setVolume(e.target.value)}
-              placeholder="např. 45.5"
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Plocha měřené konstrukce S [m²] <span className="text-red-500">*</span>
-            </label>
-            <input
-              type="number"
-              step="0.1"
-              min="0"
-              value={area}
-              onChange={(e) => setArea(e.target.value)}
-              placeholder="např. 12.5"
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            />
-          </div>
         </div>
 
         {/* File Upload */}
