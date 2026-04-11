@@ -22,7 +22,6 @@ export interface StationarySource {
   laeq: number; // Logarithmic average
   l5: number;
   l10: number;
-  l50: number;
   l90: number;
   l95: number;
   min: number;

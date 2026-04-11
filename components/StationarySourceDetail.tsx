@@ -245,7 +245,6 @@ export function StationarySourceDetail({ source, allSources, onClose }: Stationa
     tableData.push(['LAeq (dB)', formatNumber(source.laeq), background ? formatNumber(background.laeq) : '']);
     tableData.push(['L5 (dB)', formatNumber(source.l5), background ? formatNumber(background.l5) : '']);
     tableData.push(['L10 (dB)', formatNumber(source.l10), background ? formatNumber(background.l10) : '']);
-    tableData.push(['L50 (dB)', formatNumber(source.l50), background ? formatNumber(background.l50) : '']);
     tableData.push(['L90 (dB)', formatNumber(source.l90), background ? formatNumber(background.l90) : '']);
     tableData.push(['L95 (dB)', formatNumber(source.l95), background ? formatNumber(background.l95) : '']);
     tableData.push(['Min (dB)', formatNumber(source.min), background ? formatNumber(background.min) : '']);

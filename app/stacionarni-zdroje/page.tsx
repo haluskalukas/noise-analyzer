@@ -140,7 +140,6 @@ export default function StacionarniZdroje() {
       laeq: stats.laeq,
       l5: stats.l5,
       l10: stats.l10,
-      l50: stats.l50,
       l90: stats.l90,
       l95: stats.l95,
       min: stats.min,

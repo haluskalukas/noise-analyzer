@@ -43,7 +43,7 @@ export function StationaryCompleteExport({ sources, allSources, reflectionCorrec
     const overviewData: any[] = [];
     overviewData.push(['Přehled měření - Stacionární zdroje hluku']);
     overviewData.push(['']);
-    overviewData.push(['Název', 'Typ', 'Čas měření', 'LAeq (dB)', 'L5 (dB)', 'L10 (dB)', 'L50 (dB)', 'L90 (dB)', 'L95 (dB)', 'Min (dB)', 'Max (dB)']);
+    overviewData.push(['Název', 'Typ', 'Čas měření', 'LAeq (dB)', 'L5 (dB)', 'L10 (dB)', 'L90 (dB)', 'L95 (dB)', 'Min (dB)', 'Max (dB)']);
 
     sources.forEach(source => {
       const startTime = `${source.startTime.getHours().toString().padStart(2, '0')}:${source.startTime.getMinutes().toString().padStart(2, '0')}:${source.startTime.getSeconds().toString().padStart(2, '0')}`;
@@ -58,7 +58,6 @@ export function StationaryCompleteExport({ sources, allSources, reflectionCorrec
         formatNumber(source.laeq),
         formatNumber(source.l5),
         formatNumber(source.l10),
-        formatNumber(source.l50),
         formatNumber(source.l90),
         formatNumber(source.l95),
         formatNumber(source.min),
@@ -98,7 +97,6 @@ export function StationaryCompleteExport({ sources, allSources, reflectionCorrec
       sourceData.push(['LAeq (dB)', formatNumber(source.laeq)]);
       sourceData.push(['L5 (dB)', formatNumber(source.l5)]);
       sourceData.push(['L10 (dB)', formatNumber(source.l10)]);
-      sourceData.push(['L50 (dB)', formatNumber(source.l50)]);
       sourceData.push(['L90 (dB)', formatNumber(source.l90)]);
       sourceData.push(['L95 (dB)', formatNumber(source.l95)]);
       sourceData.push(['Min (dB)', formatNumber(source.min)]);

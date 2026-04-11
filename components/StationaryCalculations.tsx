@@ -71,7 +71,7 @@ export function StationaryCalculations({ sources, allSources, reflectionCorrecti
 
     // Basic data table for all sources
     data.push(['Základní údaje']);
-    data.push(['', 'Čas měření', 'LAeq (dB)', 'L5 (dB)', 'L10 (dB)', 'L50 (dB)', 'L90 (dB)', 'L95 (dB)']);
+    data.push(['', 'Čas měření', 'LAeq (dB)', 'L5 (dB)', 'L10 (dB)', 'L90 (dB)', 'L95 (dB)']);
 
     sources.forEach(source => {
       const startTime = `${source.startTime.getHours().toString().padStart(2, '0')}:${source.startTime.getMinutes().toString().padStart(2, '0')}:${source.startTime.getSeconds().toString().padStart(2, '0')}`;
@@ -83,7 +83,6 @@ export function StationaryCalculations({ sources, allSources, reflectionCorrecti
         formatNumber(source.laeq),
         formatNumber(source.l5),
         formatNumber(source.l10),
-        formatNumber(source.l50),
         formatNumber(source.l90),
         formatNumber(source.l95),
       ]);
@@ -177,9 +176,6 @@ export function StationaryCalculations({ sources, allSources, reflectionCorrecti
                   L10 (dB)
                 </th>
                 <th className="px-6 py-3 text-center text-xs font-medium text-gray-700 tracking-wider">
-                  L50 (dB)
-                </th>
-                <th className="px-6 py-3 text-center text-xs font-medium text-gray-700 tracking-wider">
                   L90 (dB)
                 </th>
                 <th className="px-6 py-3 text-center text-xs font-medium text-gray-700 tracking-wider">
@@ -208,9 +204,6 @@ export function StationaryCalculations({ sources, allSources, reflectionCorrecti
                     </td>
                     <td className="px-6 py-4 text-sm text-center text-gray-700">
                       {formatNumber(source.l10)}
-                    </td>
-                    <td className="px-6 py-4 text-sm text-center text-gray-700">
-                      {formatNumber(source.l50)}
                     </td>
                     <td className="px-6 py-4 text-sm text-center text-gray-700">
                       {formatNumber(source.l90)}

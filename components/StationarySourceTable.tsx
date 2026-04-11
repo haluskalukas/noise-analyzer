@@ -36,7 +36,6 @@ export function StationarySourceTable({
       'LAeq (dB)': formatNumber(source.laeq),
       'L5 (dB)': formatNumber(source.l5),
       'L10 (dB)': formatNumber(source.l10),
-      'L50 (dB)': formatNumber(source.l50),
       'L90 (dB)': formatNumber(source.l90),
       'L95 (dB)': formatNumber(source.l95),
       'Min (dB)': formatNumber(source.min),
@@ -56,7 +55,6 @@ export function StationarySourceTable({
       { wch: 12 }, // LAeq
       { wch: 10 }, // L5
       { wch: 10 }, // L10
-      { wch: 10 }, // L50
       { wch: 10 }, // L90
       { wch: 10 }, // L95
       { wch: 10 }, // Min
@@ -120,9 +118,6 @@ export function StationarySourceTable({
                 L10 (dB)
               </th>
               <th className="px-3 py-3 text-left text-xs font-medium text-gray-700 tracking-wider">
-                L50 (dB)
-              </th>
-              <th className="px-3 py-3 text-left text-xs font-medium text-gray-700 tracking-wider">
                 L90 (dB)
               </th>
               <th className="px-3 py-3 text-left text-xs font-medium text-gray-700 tracking-wider">
@@ -165,9 +160,6 @@ export function StationarySourceTable({
                 </td>
                 <td className="px-3 py-3 whitespace-nowrap text-sm text-gray-900">
                   {formatNumber(source.l10)}
-                </td>
-                <td className="px-3 py-3 whitespace-nowrap text-sm text-gray-900">
-                  {formatNumber(source.l50)}
                 </td>
                 <td className="px-3 py-3 whitespace-nowrap text-sm text-gray-900">
                   {formatNumber(source.l90)}
