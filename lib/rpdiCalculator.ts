@@ -34,22 +34,56 @@ export interface RPDIResult {
   // Výsledky pro každou kategorii vozidel
   categories: {
     [key in VehicleType]: {
-      measuredDaily: number;      // Naměřená denní intenzita (Im)
-      weeklyAverage: number;      // Týdenní průměr (It)
-      RPDI: number;               // Roční průměrná denní intenzita
-      usedCoefficients: {
-        hourToDay: number;        // km,d (pokud měření není 24h)
-        dayToWeek: number;        // kd,t
-        weekToYear: number;       // kt,RPDI
+      total: {
+        measuredDaily: number;      // Naměřená denní intenzita (Im) - celkem 24h
+        weeklyAverage: number;      // Týdenní průměr (It)
+        RPDI: number;               // Roční průměrná denní intenzita
+        usedCoefficients: {
+          hourToDay: number;        // km,d (pokud měření není 24h)
+          dayToWeek: number;        // kd,t
+          weekToYear: number;       // kt,RPDI
+        };
+      };
+      day: {
+        measuredDaily: number;      // Naměřená denní intenzita (6:00-22:00)
+        weeklyAverage: number;      // Týdenní průměr
+        RPDI: number;               // Roční průměrná denní intenzita
+        usedCoefficients: {
+          hourToDay: number;
+          dayToWeek: number;
+          weekToYear: number;
+        };
+      };
+      night: {
+        measuredDaily: number;      // Naměřená denní intenzita (22:00-6:00)
+        weeklyAverage: number;      // Týdenní průměr
+        RPDI: number;               // Roční průměrná denní intenzita
+        usedCoefficients: {
+          hourToDay: number;
+          dayToWeek: number;
+          weekToYear: number;
+        };
       };
     };
   };
 
   // Celkové hodnoty
   total: {
-    measuredDaily: number;
-    weeklyAverage: number;
-    RPDI: number;
+    total: {
+      measuredDaily: number;
+      weeklyAverage: number;
+      RPDI: number;
+    };
+    day: {
+      measuredDaily: number;
+      weeklyAverage: number;
+      RPDI: number;
+    };
+    night: {
+      measuredDaily: number;
+      weeklyAverage: number;
+      RPDI: number;
+    };
   };
 
   // Metadata
@@ -102,48 +136,79 @@ export function calculateRPDI(input: RPDIInput): RPDIResult {
     const tp189Category = getTP189Category(vehicleType);
     const counts = hourlyCounts[vehicleType];
 
-    // 1. Naměřená denní intenzita (Im) - součet všech 24 hodin
-    const measuredDaily = counts.reduce((sum, count) => sum + count, 0);
-
-    // 2. Koeficient km,d (hodina -> den)
-    // Pokud měříme celých 24 hodin, tento koeficient nepoužíváme (= 1.0)
-    // V našem případě máme vždy 24 hodin, takže km,d = 1.0
+    // Koeficienty (stejné pro den i noc)
     const k_m_d = 1.0;
-
-    // 3. Koeficient kd,t (den -> týdenní průměr)
-    // kd,t = 1 / (podíl dne v týdnu / 100)
-    // Podíl získáme z WEEKLY_VARIATION
     const weeklyShare = WEEKLY_VARIATION[roadType][season][tp189Category][dayOfWeek];
     const k_d_t = 100 / weeklyShare;
-
-    // 4. Týdenní průměr (It)
-    const weeklyAverage = measuredDaily * k_m_d * k_d_t;
-
-    // 5. Koeficient kt,RPDI (týdenní průměr -> roční průměr)
-    // kt,RPDI = 1 / (podíl měsíce / 100)
     const monthlyShare = YEARLY_VARIATION[roadType][tp189Category][month - 1];
     const k_t_RPDI = 100 / monthlyShare;
 
-    // 6. RPDI
-    const RPDI = weeklyAverage * k_t_RPDI;
+    // CELKEM 24h
+    const measuredDailyTotal = counts.reduce((sum, count) => sum + count, 0);
+    const weeklyAverageTotal = measuredDailyTotal * k_m_d * k_d_t;
+    const rpdiTotal = weeklyAverageTotal * k_t_RPDI;
+
+    // DEN (6:00-22:00) - hodiny 6-21
+    const measuredDailyDay = counts.slice(6, 22).reduce((sum, count) => sum + count, 0);
+    const weeklyAverageDay = measuredDailyDay * k_m_d * k_d_t;
+    const rpdiDay = weeklyAverageDay * k_t_RPDI;
+
+    // NOC (22:00-6:00) - hodiny 22-23 a 0-5
+    const measuredDailyNight = [...counts.slice(22, 24), ...counts.slice(0, 6)].reduce((sum, count) => sum + count, 0);
+    const weeklyAverageNight = measuredDailyNight * k_m_d * k_d_t;
+    const rpdiNight = weeklyAverageNight * k_t_RPDI;
 
     categories[vehicleType] = {
-      measuredDaily,
-      weeklyAverage,
-      RPDI: Math.round(RPDI),
-      usedCoefficients: {
-        hourToDay: k_m_d,
-        dayToWeek: k_d_t,
-        weekToYear: k_t_RPDI,
+      total: {
+        measuredDaily: measuredDailyTotal,
+        weeklyAverage: weeklyAverageTotal,
+        RPDI: Math.round(rpdiTotal),
+        usedCoefficients: {
+          hourToDay: k_m_d,
+          dayToWeek: k_d_t,
+          weekToYear: k_t_RPDI,
+        },
+      },
+      day: {
+        measuredDaily: measuredDailyDay,
+        weeklyAverage: weeklyAverageDay,
+        RPDI: Math.round(rpdiDay),
+        usedCoefficients: {
+          hourToDay: k_m_d,
+          dayToWeek: k_d_t,
+          weekToYear: k_t_RPDI,
+        },
+      },
+      night: {
+        measuredDaily: measuredDailyNight,
+        weeklyAverage: weeklyAverageNight,
+        RPDI: Math.round(rpdiNight),
+        usedCoefficients: {
+          hourToDay: k_m_d,
+          dayToWeek: k_d_t,
+          weekToYear: k_t_RPDI,
+        },
       },
     };
   }
 
   // Celkové hodnoty (součet všech kategorií)
   const total = {
-    measuredDaily: Object.values(categories).reduce((sum, cat) => sum + cat.measuredDaily, 0),
-    weeklyAverage: Object.values(categories).reduce((sum, cat) => sum + cat.weeklyAverage, 0),
-    RPDI: Object.values(categories).reduce((sum, cat) => sum + cat.RPDI, 0),
+    total: {
+      measuredDaily: Object.values(categories).reduce((sum, cat) => sum + cat.total.measuredDaily, 0),
+      weeklyAverage: Object.values(categories).reduce((sum, cat) => sum + cat.total.weeklyAverage, 0),
+      RPDI: Object.values(categories).reduce((sum, cat) => sum + cat.total.RPDI, 0),
+    },
+    day: {
+      measuredDaily: Object.values(categories).reduce((sum, cat) => sum + cat.day.measuredDaily, 0),
+      weeklyAverage: Object.values(categories).reduce((sum, cat) => sum + cat.day.weeklyAverage, 0),
+      RPDI: Object.values(categories).reduce((sum, cat) => sum + cat.day.RPDI, 0),
+    },
+    night: {
+      measuredDaily: Object.values(categories).reduce((sum, cat) => sum + cat.night.measuredDaily, 0),
+      weeklyAverage: Object.values(categories).reduce((sum, cat) => sum + cat.night.weeklyAverage, 0),
+      RPDI: Object.values(categories).reduce((sum, cat) => sum + cat.night.RPDI, 0),
+    },
   };
 
   return {
@@ -222,16 +287,16 @@ export function formatRPDIResult(result: RPDIResult): string {
   for (const vehicleType of vehicleTypes) {
     const cat = result.categories[vehicleType];
     output += `${vehicleNames[vehicleType]} (${vehicleType}):\n`;
-    output += `  Naměřená denní intenzita: ${cat.measuredDaily} voz/den\n`;
-    output += `  Týdenní průměr: ${Math.round(cat.weeklyAverage)} voz/den\n`;
-    output += `  RPDI: ${cat.RPDI} voz/den\n`;
-    output += `  Koeficienty: kd,t=${cat.usedCoefficients.dayToWeek.toFixed(3)}, kt,RPDI=${cat.usedCoefficients.weekToYear.toFixed(3)}\n\n`;
+    output += `  CELKEM 24h - RPDI: ${cat.total.RPDI} voz/den (naměřeno: ${cat.total.measuredDaily})\n`;
+    output += `  DEN - RPDI: ${cat.day.RPDI} voz/den (naměřeno: ${cat.day.measuredDaily})\n`;
+    output += `  NOC - RPDI: ${cat.night.RPDI} voz/den (naměřeno: ${cat.night.measuredDaily})\n`;
+    output += `  Koeficienty: kd,t=${cat.total.usedCoefficients.dayToWeek.toFixed(3)}, kt,RPDI=${cat.total.usedCoefficients.weekToYear.toFixed(3)}\n\n`;
   }
 
   output += `--- CELKEM ---\n`;
-  output += `Naměřená denní intenzita: ${result.total.measuredDaily} voz/den\n`;
-  output += `Týdenní průměr: ${Math.round(result.total.weeklyAverage)} voz/den\n`;
-  output += `RPDI: ${result.total.RPDI} voz/den\n`;
+  output += `CELKEM 24h - RPDI: ${result.total.total.RPDI} voz/den (naměřeno: ${result.total.total.measuredDaily})\n`;
+  output += `DEN - RPDI: ${result.total.day.RPDI} voz/den (naměřeno: ${result.total.day.measuredDaily})\n`;
+  output += `NOC - RPDI: ${result.total.night.RPDI} voz/den (naměřeno: ${result.total.night.measuredDaily})\n`;
 
   return output;
 }

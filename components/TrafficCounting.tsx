@@ -162,65 +162,182 @@ export function TrafficCounting({ onDataChange }: TrafficCountingProps) {
             </p>
           </div>
 
-          <div className="p-6">
-            {/* Celkové RPDI */}
-            <div className="bg-white rounded-lg border-2 border-green-500 p-6 mb-6 shadow-md">
-              <div className="text-center">
-                <div className="text-sm font-medium text-gray-600 mb-1">CELKOVÁ ROČNÍ PRŮMĚRNÁ DENNÍ INTENZITA</div>
-                <div className="text-5xl font-bold text-green-600 mb-2">
-                  {formatNumber(rpdiResult.total.RPDI, 0)}
+          <div className="p-6 space-y-6">
+            {/* Celkové RPDI - 3 karty */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {/* Celkem 24h */}
+              <div className="bg-white rounded-lg border-2 border-green-500 p-4 shadow-md">
+                <div className="text-center">
+                  <div className="text-xs font-medium text-gray-600 mb-1">CELKEM 24h</div>
+                  <div className="text-3xl font-bold text-green-600 mb-1">
+                    {formatNumber(rpdiResult.total.total.RPDI, 0)}
+                  </div>
+                  <div className="text-xs text-gray-500">voz/den RPDI</div>
+                  <div className="text-xs text-gray-400 mt-2">
+                    Naměřeno: {formatNumber(rpdiResult.total.total.measuredDaily, 0)}
+                  </div>
                 </div>
-                <div className="text-sm text-gray-500">vozidel/den</div>
               </div>
-              <div className="grid grid-cols-2 gap-4 mt-4 pt-4 border-t border-gray-200">
+
+              {/* Den */}
+              <div className="bg-white rounded-lg border-2 border-yellow-400 p-4 shadow-md">
                 <div className="text-center">
-                  <div className="text-xs text-gray-600">Naměřená denní intenzita</div>
-                  <div className="text-xl font-semibold text-gray-900">{formatNumber(rpdiResult.total.measuredDaily, 0)}</div>
+                  <div className="text-xs font-medium text-gray-600 mb-1">☀️ DEN (6:00-22:00)</div>
+                  <div className="text-3xl font-bold text-yellow-600 mb-1">
+                    {formatNumber(rpdiResult.total.day.RPDI, 0)}
+                  </div>
+                  <div className="text-xs text-gray-500">voz/den RPDI</div>
+                  <div className="text-xs text-gray-400 mt-2">
+                    Naměřeno: {formatNumber(rpdiResult.total.day.measuredDaily, 0)}
+                  </div>
                 </div>
+              </div>
+
+              {/* Noc */}
+              <div className="bg-white rounded-lg border-2 border-blue-400 p-4 shadow-md">
                 <div className="text-center">
-                  <div className="text-xs text-gray-600">Týdenní průměr</div>
-                  <div className="text-xl font-semibold text-gray-900">{formatNumber(Math.round(rpdiResult.total.weeklyAverage), 0)}</div>
+                  <div className="text-xs font-medium text-gray-600 mb-1">🌙 NOC (22:00-6:00)</div>
+                  <div className="text-3xl font-bold text-blue-600 mb-1">
+                    {formatNumber(rpdiResult.total.night.RPDI, 0)}
+                  </div>
+                  <div className="text-xs text-gray-500">voz/den RPDI</div>
+                  <div className="text-xs text-gray-400 mt-2">
+                    Naměřeno: {formatNumber(rpdiResult.total.night.measuredDaily, 0)}
+                  </div>
                 </div>
               </div>
             </div>
 
-            {/* Tabulka podle kategorií */}
+            {/* Tabulka podle kategorií - CELKEM 24h */}
             <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
-              <table className="min-w-full divide-y divide-gray-200">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-700 uppercase">Kategorie</th>
-                    <th className="px-4 py-3 text-center text-xs font-medium text-gray-700 uppercase">Naměřeno<br/>(den)</th>
-                    <th className="px-4 py-3 text-center text-xs font-medium text-gray-700 uppercase">Týdenní<br/>průměr</th>
-                    <th className="px-4 py-3 text-center text-xs font-medium text-gray-700 uppercase bg-green-100">RPDI</th>
-                    <th className="px-4 py-3 text-center text-xs font-medium text-gray-700 uppercase">k<sub>d,t</sub></th>
-                    <th className="px-4 py-3 text-center text-xs font-medium text-gray-700 uppercase">k<sub>t,RPDI</sub></th>
-                  </tr>
-                </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
-                  {(['OA', 'LN', 'N', 'A', 'M', 'K'] as const).map((category) => {
-                    const result = rpdiResult.categories[category];
-                    const names: Record<string, string> = {
-                      OA: '🚗 Osobní automobily',
-                      LN: '🚐 Lehká užitková',
-                      N: '🚚 Nákladní',
-                      A: '🚌 Autobusy',
-                      M: '🏍️ Motocykly',
-                      K: '🚲 Kola/koloběžky',
-                    };
-                    return (
-                      <tr key={category} className="hover:bg-gray-50">
-                        <td className="px-4 py-3 text-sm font-medium text-gray-900">{names[category]}</td>
-                        <td className="px-4 py-3 text-center text-sm text-gray-900">{formatNumber(result.measuredDaily, 0)}</td>
-                        <td className="px-4 py-3 text-center text-sm text-gray-900">{formatNumber(Math.round(result.weeklyAverage), 0)}</td>
-                        <td className="px-4 py-3 text-center text-sm font-bold text-green-600 bg-green-50">{formatNumber(result.RPDI, 0)}</td>
-                        <td className="px-4 py-3 text-center text-xs text-gray-600">{result.usedCoefficients.dayToWeek.toFixed(3)}</td>
-                        <td className="px-4 py-3 text-center text-xs text-gray-600">{result.usedCoefficients.weekToYear.toFixed(3)}</td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
+              <div className="px-4 py-3 bg-green-100 border-b border-green-200">
+                <h4 className="text-sm font-bold text-green-900">CELKEM 24 HODIN</h4>
+              </div>
+              <div className="overflow-x-auto">
+                <table className="min-w-full divide-y divide-gray-200">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-700 uppercase">Kategorie</th>
+                      <th className="px-4 py-3 text-center text-xs font-medium text-gray-700 uppercase">Naměřeno</th>
+                      <th className="px-4 py-3 text-center text-xs font-medium text-gray-700 uppercase">Týdenní<br/>průměr</th>
+                      <th className="px-4 py-3 text-center text-xs font-medium text-gray-700 uppercase bg-green-100">RPDI</th>
+                      <th className="px-4 py-3 text-center text-xs font-medium text-gray-700 uppercase">k<sub>d,t</sub></th>
+                      <th className="px-4 py-3 text-center text-xs font-medium text-gray-700 uppercase">k<sub>t,RPDI</sub></th>
+                    </tr>
+                  </thead>
+                  <tbody className="bg-white divide-y divide-gray-200">
+                    {(['OA', 'LN', 'N', 'A', 'M', 'K'] as const).map((category) => {
+                      const result = rpdiResult.categories[category].total;
+                      const names: Record<string, string> = {
+                        OA: '🚗 Osobní automobily',
+                        LN: '🚐 Lehká užitková',
+                        N: '🚚 Nákladní',
+                        A: '🚌 Autobusy',
+                        M: '🏍️ Motocykly',
+                        K: '🚲 Kola/koloběžky',
+                      };
+                      return (
+                        <tr key={category} className="hover:bg-gray-50">
+                          <td className="px-4 py-3 text-sm font-medium text-gray-900">{names[category]}</td>
+                          <td className="px-4 py-3 text-center text-sm text-gray-900">{formatNumber(result.measuredDaily, 0)}</td>
+                          <td className="px-4 py-3 text-center text-sm text-gray-900">{formatNumber(Math.round(result.weeklyAverage), 0)}</td>
+                          <td className="px-4 py-3 text-center text-sm font-bold text-green-600 bg-green-50">{formatNumber(result.RPDI, 0)}</td>
+                          <td className="px-4 py-3 text-center text-xs text-gray-600">{result.usedCoefficients.dayToWeek.toFixed(3)}</td>
+                          <td className="px-4 py-3 text-center text-xs text-gray-600">{result.usedCoefficients.weekToYear.toFixed(3)}</td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            {/* Tabulka podle kategorií - DEN */}
+            <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
+              <div className="px-4 py-3 bg-yellow-100 border-b border-yellow-200">
+                <h4 className="text-sm font-bold text-yellow-900">☀️ DEN (6:00-22:00)</h4>
+              </div>
+              <div className="overflow-x-auto">
+                <table className="min-w-full divide-y divide-gray-200">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-700 uppercase">Kategorie</th>
+                      <th className="px-4 py-3 text-center text-xs font-medium text-gray-700 uppercase">Naměřeno</th>
+                      <th className="px-4 py-3 text-center text-xs font-medium text-gray-700 uppercase">Týdenní<br/>průměr</th>
+                      <th className="px-4 py-3 text-center text-xs font-medium text-gray-700 uppercase bg-yellow-100">RPDI</th>
+                      <th className="px-4 py-3 text-center text-xs font-medium text-gray-700 uppercase">k<sub>d,t</sub></th>
+                      <th className="px-4 py-3 text-center text-xs font-medium text-gray-700 uppercase">k<sub>t,RPDI</sub></th>
+                    </tr>
+                  </thead>
+                  <tbody className="bg-white divide-y divide-gray-200">
+                    {(['OA', 'LN', 'N', 'A', 'M', 'K'] as const).map((category) => {
+                      const result = rpdiResult.categories[category].day;
+                      const names: Record<string, string> = {
+                        OA: '🚗 Osobní automobily',
+                        LN: '🚐 Lehká užitková',
+                        N: '🚚 Nákladní',
+                        A: '🚌 Autobusy',
+                        M: '🏍️ Motocykly',
+                        K: '🚲 Kola/koloběžky',
+                      };
+                      return (
+                        <tr key={category} className="hover:bg-gray-50">
+                          <td className="px-4 py-3 text-sm font-medium text-gray-900">{names[category]}</td>
+                          <td className="px-4 py-3 text-center text-sm text-gray-900">{formatNumber(result.measuredDaily, 0)}</td>
+                          <td className="px-4 py-3 text-center text-sm text-gray-900">{formatNumber(Math.round(result.weeklyAverage), 0)}</td>
+                          <td className="px-4 py-3 text-center text-sm font-bold text-yellow-600 bg-yellow-50">{formatNumber(result.RPDI, 0)}</td>
+                          <td className="px-4 py-3 text-center text-xs text-gray-600">{result.usedCoefficients.dayToWeek.toFixed(3)}</td>
+                          <td className="px-4 py-3 text-center text-xs text-gray-600">{result.usedCoefficients.weekToYear.toFixed(3)}</td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            {/* Tabulka podle kategorií - NOC */}
+            <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
+              <div className="px-4 py-3 bg-blue-100 border-b border-blue-200">
+                <h4 className="text-sm font-bold text-blue-900">🌙 NOC (22:00-6:00)</h4>
+              </div>
+              <div className="overflow-x-auto">
+                <table className="min-w-full divide-y divide-gray-200">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-700 uppercase">Kategorie</th>
+                      <th className="px-4 py-3 text-center text-xs font-medium text-gray-700 uppercase">Naměřeno</th>
+                      <th className="px-4 py-3 text-center text-xs font-medium text-gray-700 uppercase">Týdenní<br/>průměr</th>
+                      <th className="px-4 py-3 text-center text-xs font-medium text-gray-700 uppercase bg-blue-100">RPDI</th>
+                      <th className="px-4 py-3 text-center text-xs font-medium text-gray-700 uppercase">k<sub>d,t</sub></th>
+                      <th className="px-4 py-3 text-center text-xs font-medium text-gray-700 uppercase">k<sub>t,RPDI</sub></th>
+                    </tr>
+                  </thead>
+                  <tbody className="bg-white divide-y divide-gray-200">
+                    {(['OA', 'LN', 'N', 'A', 'M', 'K'] as const).map((category) => {
+                      const result = rpdiResult.categories[category].night;
+                      const names: Record<string, string> = {
+                        OA: '🚗 Osobní automobily',
+                        LN: '🚐 Lehká užitková',
+                        N: '🚚 Nákladní',
+                        A: '🚌 Autobusy',
+                        M: '🏍️ Motocykly',
+                        K: '🚲 Kola/koloběžky',
+                      };
+                      return (
+                        <tr key={category} className="hover:bg-gray-50">
+                          <td className="px-4 py-3 text-sm font-medium text-gray-900">{names[category]}</td>
+                          <td className="px-4 py-3 text-center text-sm text-gray-900">{formatNumber(result.measuredDaily, 0)}</td>
+                          <td className="px-4 py-3 text-center text-sm text-gray-900">{formatNumber(Math.round(result.weeklyAverage), 0)}</td>
+                          <td className="px-4 py-3 text-center text-sm font-bold text-blue-600 bg-blue-50">{formatNumber(result.RPDI, 0)}</td>
+                          <td className="px-4 py-3 text-center text-xs text-gray-600">{result.usedCoefficients.dayToWeek.toFixed(3)}</td>
+                          <td className="px-4 py-3 text-center text-xs text-gray-600">{result.usedCoefficients.weekToYear.toFixed(3)}</td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
             </div>
 
             {/* Info box */}
