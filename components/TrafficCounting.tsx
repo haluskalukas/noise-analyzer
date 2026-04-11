@@ -459,10 +459,10 @@ export function TrafficCounting({ onDataChange }: TrafficCountingProps) {
         </div>
       </div>
 
-      {/* Summary Table */}
+      {/* Summary Table with RPDI */}
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
         <div className="px-6 py-4 bg-gray-50 border-b border-gray-200">
-          <h3 className="text-lg font-semibold text-gray-900">Součty podle období</h3>
+          <h3 className="text-lg font-semibold text-gray-900">Součty podle období {showRPDI && rpdiResult && '+ RPDI'}</h3>
         </div>
         <div className="overflow-x-auto">
           <table className="min-w-full divide-y divide-gray-200">
@@ -492,9 +492,18 @@ export function TrafficCounting({ onDataChange }: TrafficCountingProps) {
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
-              <SummaryRow label="Den (6:00-22:00)" counts={summary.day} bgColor="bg-yellow-50" />
-              <SummaryRow label="Noc (22:00-6:00)" counts={summary.night} bgColor="bg-blue-50" />
-              <SummaryRow label="Celkem 24h" counts={summary.total} bgColor="bg-green-50" />
+              <SummaryRow label="☀️ Den (6:00-22:00)" counts={summary.day} bgColor="bg-yellow-50" />
+              {showRPDI && rpdiResult && (
+                <SummaryRPDIRow label="☀️ Den - RPDI" rpdiData={rpdiResult.categories} period="day" bgColor="bg-yellow-100" />
+              )}
+              <SummaryRow label="🌙 Noc (22:00-6:00)" counts={summary.night} bgColor="bg-blue-50" />
+              {showRPDI && rpdiResult && (
+                <SummaryRPDIRow label="🌙 Noc - RPDI" rpdiData={rpdiResult.categories} period="night" bgColor="bg-blue-100" />
+              )}
+              <SummaryRow label="🌍 Celkem 24h" counts={summary.total} bgColor="bg-green-50" />
+              {showRPDI && rpdiResult && (
+                <SummaryRPDIRow label="🌍 Celkem - RPDI" rpdiData={rpdiResult.categories} period="total" bgColor="bg-green-100" />
+              )}
             </tbody>
           </table>
         </div>
@@ -561,6 +570,44 @@ function SummaryRow({ label, counts, bgColor }: { label: string; counts: any; bg
       </td>
       <td className="px-6 py-4 whitespace-nowrap text-sm text-center text-gray-900">
         {formatNumber(counts.K, 0)}
+      </td>
+    </tr>
+  );
+}
+
+function SummaryRPDIRow({
+  label,
+  rpdiData,
+  period,
+  bgColor
+}: {
+  label: string;
+  rpdiData: any;
+  period: 'total' | 'day' | 'night';
+  bgColor: string;
+}) {
+  return (
+    <tr className={bgColor}>
+      <td className="px-6 py-4 whitespace-nowrap text-sm font-bold text-gray-900">
+        {label}
+      </td>
+      <td className="px-6 py-4 whitespace-nowrap text-sm text-center font-semibold text-gray-900">
+        {formatNumber(rpdiData.OA[period].RPDI, 0)}
+      </td>
+      <td className="px-6 py-4 whitespace-nowrap text-sm text-center font-semibold text-gray-900">
+        {formatNumber(rpdiData.LN[period].RPDI, 0)}
+      </td>
+      <td className="px-6 py-4 whitespace-nowrap text-sm text-center font-semibold text-gray-900">
+        {formatNumber(rpdiData.N[period].RPDI, 0)}
+      </td>
+      <td className="px-6 py-4 whitespace-nowrap text-sm text-center font-semibold text-gray-900">
+        {formatNumber(rpdiData.A[period].RPDI, 0)}
+      </td>
+      <td className="px-6 py-4 whitespace-nowrap text-sm text-center font-semibold text-gray-900">
+        {formatNumber(rpdiData.M[period].RPDI, 0)}
+      </td>
+      <td className="px-6 py-4 whitespace-nowrap text-sm text-center font-semibold text-gray-900">
+        {formatNumber(rpdiData.K[period].RPDI, 0)}
       </td>
     </tr>
   );
