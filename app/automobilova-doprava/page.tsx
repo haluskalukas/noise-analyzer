@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { FileUpload } from '@/components/FileUpload';
 import { NoiseChart } from '@/components/NoiseChart';
 import { Statistics } from '@/components/Statistics';
+import { TrafficCounting } from '@/components/TrafficCounting';
 import { NoiseData, TimeFilter, NoiseDataPoint, NoiseStats, HourlyAvg } from '@/types';
 import { format } from 'date-fns';
 import { cs } from 'date-fns/locale';
@@ -68,7 +69,7 @@ function calculateStats(points: NoiseDataPoint[]): NoiseStats {
 export default function Home() {
   const [noiseData, setNoiseData] = useState<NoiseData | null>(null);
   const [timeFilter, setTimeFilter] = useState<TimeFilter>({ type: 'all' });
-  const [activeTab, setActiveTab] = useState<'chart' | 'stats'>('chart');
+  const [activeTab, setActiveTab] = useState<'chart' | 'stats' | 'counting'>('chart');
   const [deletedIndices, setDeletedIndices] = useState<Set<number>>(new Set());
 
   // Load from localStorage on mount
@@ -516,6 +517,11 @@ export default function Home() {
                     onClick={() => setActiveTab('stats')}
                     label="📊 Statistiky"
                   />
+                  <TabButton
+                    active={activeTab === 'counting'}
+                    onClick={() => setActiveTab('counting')}
+                    label="🚗 Sčítání"
+                  />
                 </nav>
               </div>
 
@@ -531,6 +537,9 @@ export default function Home() {
                 )}
                 {activeTab === 'stats' && (
                   <Statistics stats={currentStats || noiseData.stats} />
+                )}
+                {activeTab === 'counting' && (
+                  <TrafficCounting />
                 )}
               </div>
             </div>
