@@ -7,11 +7,13 @@ import { NoiseChart } from '@/components/NoiseChart';
 import { Statistics } from '@/components/Statistics';
 import { TrafficCounting } from '@/components/TrafficCounting';
 import NoiseCalculator from '@/components/NoiseCalculator';
+import Summary from '@/components/Summary';
 import { NoiseData, TimeFilter, NoiseDataPoint, NoiseStats, HourlyAvg } from '@/types';
 import { HourlyTrafficCount, GroupedTrafficSummary } from '@/types/traffic';
 import { initializeHourlyCounts, calculateTrafficSummary, calculateGroupedSummary, calculateTP189GroupedSummary } from '@/lib/trafficCalculations';
 import { RoadType } from '@/lib/tp189coefficients';
 import { calculateRPDI } from '@/lib/rpdiCalculator';
+import { calculateNoise } from '@/lib/noiseCalculator';
 import { format } from 'date-fns';
 import { cs } from 'date-fns/locale';
 
@@ -74,7 +76,7 @@ function calculateStats(points: NoiseDataPoint[]): NoiseStats {
 export default function Home() {
   const [noiseData, setNoiseData] = useState<NoiseData | null>(null);
   const [timeFilter, setTimeFilter] = useState<TimeFilter>({ type: 'all' });
-  const [activeTab, setActiveTab] = useState<'chart' | 'stats' | 'counting' | 'noise'>('chart');
+  const [activeTab, setActiveTab] = useState<'chart' | 'stats' | 'counting' | 'noise' | 'summary'>('chart');
   const [deletedIndices, setDeletedIndices] = useState<Set<number>>(new Set());
 
   // Traffic counting state (zachováváno mezi kartami)
@@ -210,6 +212,49 @@ export default function Home() {
       return null;
     }
   }, [trafficCounts, countingDate, roadType, showRPDI]);
+
+  // Calculate RPDI corrections for Summary tab
+  const rpdiCorrections = useMemo(() => {
+    if (!countingGrouped || !rpdiGrouped) {
+      return { day: 0, night: 0 };
+    }
+
+    // Výpočet hluku ze sčítání
+    const countingNoiseDay = calculateNoise({
+      category1: countingGrouped.day.category1,
+      category2: countingGrouped.day.category2,
+      category3: countingGrouped.day.category3,
+      speed,
+    });
+
+    const countingNoiseNight = calculateNoise({
+      category1: countingGrouped.night.category1,
+      category2: countingGrouped.night.category2,
+      category3: countingGrouped.night.category3,
+      speed,
+    });
+
+    // Výpočet hluku z RPDI
+    const rpdiNoiseDay = calculateNoise({
+      category1: rpdiGrouped.day.category1,
+      category2: rpdiGrouped.day.category2,
+      category3: rpdiGrouped.day.category3,
+      speed,
+    });
+
+    const rpdiNoiseNight = calculateNoise({
+      category1: rpdiGrouped.night.category1,
+      category2: rpdiGrouped.night.category2,
+      category3: rpdiGrouped.night.category3,
+      speed,
+    });
+
+    // Rozdíly (korekce)
+    const differenceDay = Math.round((rpdiNoiseDay.LAeq - countingNoiseDay.LAeq) * 10) / 10;
+    const differenceNight = Math.round((rpdiNoiseNight.LAeq - countingNoiseNight.LAeq) * 10) / 10;
+
+    return { day: differenceDay, night: differenceNight };
+  }, [countingGrouped, rpdiGrouped, speed]);
 
   const handleDataLoaded = (data: NoiseData) => {
     setNoiseData(data);
@@ -595,6 +640,11 @@ export default function Home() {
                     onClick={() => setActiveTab('noise')}
                     label="🔊 Výpočet hluku"
                   />
+                  <TabButton
+                    active={activeTab === 'summary'}
+                    onClick={() => setActiveTab('summary')}
+                    label="📋 Souhrn"
+                  />
                 </nav>
               </div>
 
@@ -629,6 +679,14 @@ export default function Home() {
                     rpdiGrouped={rpdiGrouped}
                     measuredDayAvg={currentStats?.dayAvg || 0}
                     measuredNightAvg={currentStats?.nightAvg || 0}
+                  />
+                )}
+                {activeTab === 'summary' && (
+                  <Summary
+                    measuredDayAvg={currentStats?.dayAvg || 0}
+                    measuredNightAvg={currentStats?.nightAvg || 0}
+                    rpdiCorrectionDay={rpdiCorrections.day}
+                    rpdiCorrectionNight={rpdiCorrections.night}
                   />
                 )}
               </div>
