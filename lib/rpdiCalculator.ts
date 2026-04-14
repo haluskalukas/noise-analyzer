@@ -26,7 +26,7 @@ export interface RPDIInput {
     N: number[];  // Nákladní (24 hodnot)
     A: number[];  // Autobusy (24 hodnot)
     M: number[];  // Motocykly (24 hodnot)
-    K: number[];  // Kola/koloběžky (24 hodnot)
+    K: number[];  // Kamiony/nákladní soupravy (24 hodnot)
   };
 }
 
@@ -283,7 +283,7 @@ export function formatRPDIResult(result: RPDIResult): string {
     N: 'Nákladní',
     A: 'Autobusy',
     M: 'Motocykly',
-    K: 'Kola/koloběžky',
+    K: 'Kamiony',
   };
 
   for (const vehicleType of vehicleTypes) {

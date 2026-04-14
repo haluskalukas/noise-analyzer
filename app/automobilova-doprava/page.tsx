@@ -7,6 +7,9 @@ import { NoiseChart } from '@/components/NoiseChart';
 import { Statistics } from '@/components/Statistics';
 import { TrafficCounting } from '@/components/TrafficCounting';
 import { NoiseData, TimeFilter, NoiseDataPoint, NoiseStats, HourlyAvg } from '@/types';
+import { HourlyTrafficCount } from '@/types/traffic';
+import { initializeHourlyCounts } from '@/lib/trafficCalculations';
+import { RoadType } from '@/lib/tp189coefficients';
 import { format } from 'date-fns';
 import { cs } from 'date-fns/locale';
 
@@ -72,6 +75,11 @@ export default function Home() {
   const [activeTab, setActiveTab] = useState<'chart' | 'stats' | 'counting'>('chart');
   const [deletedIndices, setDeletedIndices] = useState<Set<number>>(new Set());
 
+  // Traffic counting state (zachováváno mezi kartami)
+  const [trafficCounts, setTrafficCounts] = useState<HourlyTrafficCount[]>(initializeHourlyCounts());
+  const [countingDate, setCountingDate] = useState<string>(new Date().toISOString().split('T')[0]);
+  const [roadType, setRoadType] = useState<RoadType>('I');
+
   // Load from localStorage on mount
   useEffect(() => {
     try {
@@ -101,6 +109,15 @@ export default function Home() {
         if (parsed.activeTab) {
           setActiveTab(parsed.activeTab);
         }
+        if (parsed.trafficCounts) {
+          setTrafficCounts(parsed.trafficCounts);
+        }
+        if (parsed.countingDate) {
+          setCountingDate(parsed.countingDate);
+        }
+        if (parsed.roadType) {
+          setRoadType(parsed.roadType);
+        }
       }
     } catch (error) {
       console.error('Error loading saved state:', error);
@@ -116,6 +133,9 @@ export default function Home() {
           deletedIndices: Array.from(deletedIndices),
           timeFilter,
           activeTab,
+          trafficCounts,
+          countingDate,
+          roadType,
           timestamp: new Date().toISOString(),
         };
         localStorage.setItem(STORAGE_KEY, JSON.stringify(toSave));
@@ -123,7 +143,7 @@ export default function Home() {
         console.error('Error saving state:', error);
       }
     }
-  }, [noiseData, deletedIndices, timeFilter, activeTab]);
+  }, [noiseData, deletedIndices, timeFilter, activeTab, trafficCounts, countingDate, roadType]);
 
   // Recalculate statistics when data is deleted
   const currentStats = useMemo(() => {
@@ -159,6 +179,9 @@ export default function Home() {
     setTimeFilter({ type: 'all' });
     setActiveTab('chart');
     setDeletedIndices(new Set());
+    setTrafficCounts(initializeHourlyCounts());
+    setCountingDate(new Date().toISOString().split('T')[0]);
+    setRoadType('I');
     localStorage.removeItem(STORAGE_KEY);
   };
 
@@ -539,7 +562,14 @@ export default function Home() {
                   <Statistics stats={currentStats || noiseData.stats} />
                 )}
                 {activeTab === 'counting' && (
-                  <TrafficCounting />
+                  <TrafficCounting
+                    hourlyCounts={trafficCounts}
+                    onHourlyCountsChange={setTrafficCounts}
+                    countingDate={countingDate}
+                    onCountingDateChange={setCountingDate}
+                    roadType={roadType}
+                    onRoadTypeChange={setRoadType}
+                  />
                 )}
               </div>
             </div>

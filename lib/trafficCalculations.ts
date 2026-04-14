@@ -66,6 +66,40 @@ export function calculateGroupedSummary(summary: TrafficSummary): GroupedTraffic
 }
 
 /**
+ * Calculate TP 189 grouped summary (5 categories dle TP 189)
+ * O = Osobní vozidla (OA + LN)
+ * M = Motocykly
+ * N = Nákladní vozidla
+ * A = Autobusy
+ * K = Nákladní soupravy
+ */
+export function calculateTP189GroupedSummary(summary: TrafficSummary) {
+  return {
+    day: {
+      O: summary.day.OA + summary.day.LN,  // Osobní vozidla
+      M: summary.day.M,                     // Motocykly
+      N: summary.day.N,                     // Nákladní
+      A: summary.day.A,                     // Autobusy
+      K: summary.day.K,                     // Kamiony
+    },
+    night: {
+      O: summary.night.OA + summary.night.LN,
+      M: summary.night.M,
+      N: summary.night.N,
+      A: summary.night.A,
+      K: summary.night.K,
+    },
+    total: {
+      O: summary.total.OA + summary.total.LN,
+      M: summary.total.M,
+      N: summary.total.N,
+      A: summary.total.A,
+      K: summary.total.K,
+    },
+  };
+}
+
+/**
  * Initialize empty hourly counts (24 hours)
  */
 export function initializeHourlyCounts(): HourlyTrafficCount[] {

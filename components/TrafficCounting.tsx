@@ -2,24 +2,70 @@
 
 import { useState, useMemo } from 'react';
 import { HourlyTrafficCount, TrafficSummary, GroupedTrafficSummary } from '@/types/traffic';
-import { calculateTrafficSummary, calculateGroupedSummary, initializeHourlyCounts } from '@/lib/trafficCalculations';
+import { calculateTrafficSummary, calculateGroupedSummary, calculateTP189GroupedSummary, initializeHourlyCounts } from '@/lib/trafficCalculations';
 import { parseTrafficExcel } from '@/lib/trafficParser';
 import { formatNumber } from '@/lib/format';
 import { calculateRPDI, validateRPDIInput, RPDIInput, RPDIResult } from '@/lib/rpdiCalculator';
 import { RoadType } from '@/lib/tp189coefficients';
 
 interface TrafficCountingProps {
+  hourlyCounts?: HourlyTrafficCount[];
+  onHourlyCountsChange?: (data: HourlyTrafficCount[]) => void;
+  countingDate?: string;
+  onCountingDateChange?: (date: string) => void;
+  roadType?: RoadType;
+  onRoadTypeChange?: (roadType: RoadType) => void;
   onDataChange?: (data: HourlyTrafficCount[]) => void;
 }
 
-export function TrafficCounting({ onDataChange }: TrafficCountingProps) {
-  const [hourlyCounts, setHourlyCounts] = useState<HourlyTrafficCount[]>(initializeHourlyCounts());
-  const [countingDate, setCountingDate] = useState<string>(new Date().toISOString().split('T')[0]);
-  const [roadType, setRoadType] = useState<RoadType>('I');
+export function TrafficCounting({
+  hourlyCounts: externalHourlyCounts,
+  onHourlyCountsChange,
+  countingDate: externalCountingDate,
+  onCountingDateChange,
+  roadType: externalRoadType,
+  onRoadTypeChange,
+  onDataChange
+}: TrafficCountingProps) {
+  // Použij external state pokud je poskytnut, jinak internal state
+  const [internalHourlyCounts, setInternalHourlyCounts] = useState<HourlyTrafficCount[]>(initializeHourlyCounts());
+  const [internalCountingDate, setInternalCountingDate] = useState<string>(new Date().toISOString().split('T')[0]);
+  const [internalRoadType, setInternalRoadType] = useState<RoadType>('I');
   const [showRPDI, setShowRPDI] = useState(false);
+  const [isDragActive, setIsDragActive] = useState(false);
+
+  const hourlyCounts = externalHourlyCounts ?? internalHourlyCounts;
+  const countingDate = externalCountingDate ?? internalCountingDate;
+  const roadType = externalRoadType ?? internalRoadType;
+
+  const setHourlyCounts = (data: HourlyTrafficCount[] | ((prev: HourlyTrafficCount[]) => HourlyTrafficCount[])) => {
+    const newData = typeof data === 'function' ? data(hourlyCounts) : data;
+    if (onHourlyCountsChange) {
+      onHourlyCountsChange(newData);
+    } else {
+      setInternalHourlyCounts(newData);
+    }
+  };
+
+  const setCountingDate = (date: string) => {
+    if (onCountingDateChange) {
+      onCountingDateChange(date);
+    } else {
+      setInternalCountingDate(date);
+    }
+  };
+
+  const setRoadType = (type: RoadType) => {
+    if (onRoadTypeChange) {
+      onRoadTypeChange(type);
+    } else {
+      setInternalRoadType(type);
+    }
+  };
 
   const summary = useMemo(() => calculateTrafficSummary(hourlyCounts), [hourlyCounts]);
   const grouped = useMemo(() => calculateGroupedSummary(summary), [summary]);
+  const tp189Grouped = useMemo(() => calculateTP189GroupedSummary(summary), [summary]);
 
   // Výpočet RPDI
   const rpdiResult = useMemo<RPDIResult | null>(() => {
@@ -78,20 +124,83 @@ export function TrafficCounting({ onDataChange }: TrafficCountingProps) {
     event.target.value = '';
   };
 
+  const handleDrop = async (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    setIsDragActive(false);
+
+    const file = e.dataTransfer.files?.[0];
+    if (!file) return;
+
+    // Check file type
+    const validTypes = [
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      'application/vnd.ms-excel',
+      'text/csv'
+    ];
+
+    if (!validTypes.includes(file.type) &&
+        !file.name.match(/\.(xlsx|xls|csv)$/i)) {
+      alert('Neplatný formát souboru. Použij .xlsx, .xls nebo .csv');
+      return;
+    }
+
+    try {
+      const data = await parseTrafficExcel(file);
+      setHourlyCounts(data);
+      onDataChange?.(data);
+    } catch (error) {
+      alert((error as Error).message);
+    }
+  };
+
+  const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    setIsDragActive(true);
+  };
+
+  const handleDragLeave = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    setIsDragActive(false);
+  };
+
   return (
     <div className="space-y-6">
-      {/* Upload Section */}
-      <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+      {/* Upload Section with Drag & Drop */}
+      <div
+        onDrop={handleDrop}
+        onDragOver={handleDragOver}
+        onDragLeave={handleDragLeave}
+        className={`bg-blue-50 border-2 border-dashed rounded-lg p-6 transition-all ${
+          isDragActive
+            ? 'border-blue-500 bg-blue-100 scale-[1.02]'
+            : 'border-blue-200'
+        }`}
+      >
         <h3 className="text-sm font-medium text-blue-900 mb-2">📤 Import dat z Excelu</h3>
-        <p className="text-xs text-blue-700 mb-3">
+        <p className="text-xs text-blue-700 mb-4">
           Formát: Hodina (0-23), OA, LN, N, A, M, K
         </p>
-        <input
-          type="file"
-          accept=".xlsx,.xls,.csv"
-          onChange={handleFileUpload}
-          className="block w-full text-sm text-gray-900 border border-blue-300 rounded-lg cursor-pointer bg-white file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-blue-600 file:text-white hover:file:bg-blue-700"
-        />
+
+        {isDragActive ? (
+          <div className="text-center py-8">
+            <div className="text-4xl mb-2">📥</div>
+            <p className="text-sm font-medium text-blue-900">Pusť soubor zde</p>
+          </div>
+        ) : (
+          <div className="space-y-3">
+            <div className="text-center py-4 border-2 border-dashed border-blue-300 rounded-lg bg-white">
+              <div className="text-3xl mb-2">📁</div>
+              <p className="text-sm text-gray-600 mb-1">Přetáhni soubor sem</p>
+              <p className="text-xs text-gray-500">nebo</p>
+            </div>
+            <input
+              type="file"
+              accept=".xlsx,.xls,.csv"
+              onChange={handleFileUpload}
+              className="block w-full text-sm text-gray-900 border border-blue-300 rounded-lg cursor-pointer bg-white file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-blue-600 file:text-white hover:file:bg-blue-700"
+            />
+          </div>
+        )}
       </div>
 
       {/* RPDI Settings Section */}
@@ -234,7 +343,7 @@ export function TrafficCounting({ onDataChange }: TrafficCountingProps) {
                         N: '🚚 Nákladní',
                         A: '🚌 Autobusy',
                         M: '🏍️ Motocykly',
-                        K: '🚲 Kola/koloběžky',
+                        K: '🚛 Kamiony',
                       };
                       return (
                         <tr key={category} className="hover:bg-gray-50">
@@ -278,7 +387,7 @@ export function TrafficCounting({ onDataChange }: TrafficCountingProps) {
                         N: '🚚 Nákladní',
                         A: '🚌 Autobusy',
                         M: '🏍️ Motocykly',
-                        K: '🚲 Kola/koloběžky',
+                        K: '🚛 Kamiony',
                       };
                       return (
                         <tr key={category} className="hover:bg-gray-50">
@@ -322,7 +431,7 @@ export function TrafficCounting({ onDataChange }: TrafficCountingProps) {
                         N: '🚚 Nákladní',
                         A: '🚌 Autobusy',
                         M: '🏍️ Motocykly',
-                        K: '🚲 Kola/koloběžky',
+                        K: '🚛 Kamiony',
                       };
                       return (
                         <tr key={category} className="hover:bg-gray-50">
@@ -543,6 +652,47 @@ export function TrafficCounting({ onDataChange }: TrafficCountingProps) {
           </table>
         </div>
       </div>
+
+      {/* TP 189 Grouped Summary Table */}
+      <div className="bg-white rounded-lg shadow-sm border border-green-300 overflow-hidden">
+        <div className="px-6 py-4 bg-green-50 border-b border-green-200">
+          <h3 className="text-lg font-semibold text-green-900">Seskupené kategorie dle TP 189 (nově vypočtené)</h3>
+          <p className="text-xs text-green-700 mt-1">
+            O: Osobní (OA+LN) • M: Motocykly • N: Nákladní • A: Autobusy • K: Kamiony
+          </p>
+        </div>
+        <div className="overflow-x-auto">
+          <table className="min-w-full divide-y divide-gray-200">
+            <thead className="bg-gray-50">
+              <tr>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">
+                  Období
+                </th>
+                <th className="px-6 py-3 text-center text-xs font-medium text-gray-700 uppercase tracking-wider">
+                  O<br/><span className="text-xs font-normal">(OA+LN)</span>
+                </th>
+                <th className="px-6 py-3 text-center text-xs font-medium text-gray-700 uppercase tracking-wider">
+                  M<br/><span className="text-xs font-normal">(Motocykly)</span>
+                </th>
+                <th className="px-6 py-3 text-center text-xs font-medium text-gray-700 uppercase tracking-wider">
+                  N<br/><span className="text-xs font-normal">(Nákladní)</span>
+                </th>
+                <th className="px-6 py-3 text-center text-xs font-medium text-gray-700 uppercase tracking-wider">
+                  A<br/><span className="text-xs font-normal">(Autobusy)</span>
+                </th>
+                <th className="px-6 py-3 text-center text-xs font-medium text-gray-700 uppercase tracking-wider">
+                  K<br/><span className="text-xs font-normal">(Kamiony)</span>
+                </th>
+              </tr>
+            </thead>
+            <tbody className="bg-white divide-y divide-gray-200">
+              <TP189GroupedRow label="Den (6:00-22:00)" counts={tp189Grouped.day} bgColor="bg-yellow-50" />
+              <TP189GroupedRow label="Noc (22:00-6:00)" counts={tp189Grouped.night} bgColor="bg-blue-50" />
+              <TP189GroupedRow label="Celkem 24h" counts={tp189Grouped.total} bgColor="bg-green-50" />
+            </tbody>
+          </table>
+        </div>
+      </div>
     </div>
   );
 }
@@ -627,6 +777,31 @@ function GroupedRow({ label, counts, bgColor }: { label: string; counts: any; bg
       </td>
       <td className="px-6 py-4 whitespace-nowrap text-sm text-center text-gray-900">
         {formatNumber(counts.category3, 0)}
+      </td>
+    </tr>
+  );
+}
+
+function TP189GroupedRow({ label, counts, bgColor }: { label: string; counts: any; bgColor: string }) {
+  return (
+    <tr className={bgColor}>
+      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+        {label}
+      </td>
+      <td className="px-6 py-4 whitespace-nowrap text-sm text-center text-gray-900">
+        {formatNumber(counts.O, 0)}
+      </td>
+      <td className="px-6 py-4 whitespace-nowrap text-sm text-center text-gray-900">
+        {formatNumber(counts.M, 0)}
+      </td>
+      <td className="px-6 py-4 whitespace-nowrap text-sm text-center text-gray-900">
+        {formatNumber(counts.N, 0)}
+      </td>
+      <td className="px-6 py-4 whitespace-nowrap text-sm text-center text-gray-900">
+        {formatNumber(counts.A, 0)}
+      </td>
+      <td className="px-6 py-4 whitespace-nowrap text-sm text-center text-gray-900">
+        {formatNumber(counts.K, 0)}
       </td>
     </tr>
   );
