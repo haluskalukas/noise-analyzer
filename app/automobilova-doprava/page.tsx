@@ -392,6 +392,17 @@ export default function Home() {
           deletedIndices: Array.from(deletedIndices),
           timeFilter,
           activeTab,
+          // Traffic counting data
+          trafficCounts,
+          countingDate,
+          roadType,
+          showRPDI,
+          speed,
+          // Summary data
+          summaryAddress,
+          summaryFacadeReflection,
+          summaryUncertainty,
+          summaryRoadBefore2001,
         },
       };
 
@@ -456,7 +467,38 @@ export default function Home() {
           setActiveTab(data.activeTab);
         }
 
-        alert(`Projekt "${projectData.name}" byl načten!\n\nVšechna data včetně grafu jsou k dispozici.`);
+        // Restore traffic counting data
+        if (data.trafficCounts) {
+          setTrafficCounts(data.trafficCounts);
+        }
+        if (data.countingDate) {
+          setCountingDate(data.countingDate);
+        }
+        if (data.roadType) {
+          setRoadType(data.roadType);
+        }
+        if (data.showRPDI !== undefined) {
+          setShowRPDI(data.showRPDI);
+        }
+        if (data.speed) {
+          setSpeed(data.speed);
+        }
+
+        // Restore summary data
+        if (data.summaryAddress) {
+          setSummaryAddress(data.summaryAddress);
+        }
+        if (data.summaryFacadeReflection !== undefined) {
+          setSummaryFacadeReflection(data.summaryFacadeReflection);
+        }
+        if (data.summaryUncertainty) {
+          setSummaryUncertainty(data.summaryUncertainty);
+        }
+        if (data.summaryRoadBefore2001 !== undefined) {
+          setSummaryRoadBefore2001(data.summaryRoadBefore2001);
+        }
+
+        alert(`Projekt "${projectData.name}" byl načten!\n\nVšechna data včetně všech záložek jsou k dispozici.`);
       } catch (error) {
         console.error('Error loading project:', error);
         alert('Nepodařilo se načíst projekt. Ujisti se, že soubor je platný projekt.');
