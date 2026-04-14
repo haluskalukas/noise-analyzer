@@ -1,5 +1,6 @@
 // TP 189: Koeficienty pro přepočet intenzit dopravy
 // Zdroj: Technické podmínky TP 189 (2018)
+// OPRAVENO: Hodnoty přesně převzaty z TP 189 PDF (duben 2024)
 
 export type RoadType = 'D-I' | 'D-II' | 'E' | 'I' | 'II-H' | 'II-S' | 'II-R-L' | 'II-R-Z' | 'M';
 export type VehicleType = 'OA' | 'LN' | 'N' | 'A' | 'M' | 'K';
@@ -7,12 +8,12 @@ export type Season = 'jarni' | 'prazdninove' | 'podzimni' | 'zimni';
 export type DayOfWeek = 'po' | 'ut' | 'st' | 'ct' | 'pa' | 'so' | 'ne';
 
 // Mapování kategorií vozidel TP 189 -> naše kategorie
-// OA = osobní automobily, LN = lehká užitková, N = nákladní, A = autobusy, M = motocykly, K = kola/koloběžky
-// TP 189 kategorie: 1=osobní+motocykly, 2=nákladní+autobusy, 3=soupravy
+// OA = osobní automobily, LN = lehká užitková, N = nákladní, A = autobusy, M = motocykly, K = kamiony
+// TP 189 kategorie: 1=osobní+motocykly, 2=lehká užitková+nákladní+autobusy, 3=kamiony (těžké nákladní soupravy)
 export const TP189_VEHICLE_MAPPING = {
   category1: ['OA', 'M'] as VehicleType[], // osobní + motocykly
   category2: ['LN', 'N', 'A'] as VehicleType[], // lehká užitková + nákladní + autobusy
-  category3: ['K'] as VehicleType[], // kola (pro úplnost, v TP 189 nejsou)
+  category3: ['K'] as VehicleType[], // kamiony (těžké nákladní soupravy)
 };
 
 // Pomocná funkce: určení sezóny podle měsíce
@@ -106,223 +107,228 @@ export const DAILY_VARIATION: Record<RoadType, Record<string, number[]>> = {
 // TÝDENNÍ VARIACE (Příloha 2.1-2.6) - podíly dnů na týdenním průměru
 // =============================================================================
 
-// Struktura: [roadType][season][vehicleCategory][dayOfWeek] = koeficient
+// OPRAVENO: Hodnoty PŘESNĚ převzaty z TP 189 PDF
+// Tyto hodnoty představují p_i^t (podíl denní intenzity daného dne k týdennímu průměru)
+// SUMUJÍ SE NA ~700% (7 dní × 100% průměr)
+// Pro výpočet koeficientu k_d,t se použije: k_d,t = 100 / p_i^t
+
+// Struktura: [roadType][season][vehicleCategory][dayOfWeek] = p_i^t v %
 // dayOfWeek: po, ut, st, ct, pa, so, ne
 
 export const WEEKLY_VARIATION: Record<RoadType, Record<Season, Record<string, Record<DayOfWeek, number>>>> = {
-  // Dálnice D-I (Příloha 2.1)
+  // Dálnice D-I (Příloha 2.1, 2.3, 2.5)
   'D-I': {
     jarni: {
-      category1: { po: 13.8, ut: 14.3, st: 14.5, ct: 14.5, pa: 14.8, so: 13.7, ne: 14.4 },
-      category2: { po: 15.4, ut: 15.4, st: 15.5, ct: 15.5, pa: 15.3, so: 11.8, ne: 11.1 },
-      category3: { po: 15.6, ut: 15.5, st: 15.6, ct: 15.6, pa: 15.4, so: 11.4, ne: 10.9 },
+      category1: { po: 97.1, ut: 96.1, st: 102.0, ct: 107.0, pa: 118.8, so: 87.4, ne: 91.6 },
+      category2: { po: 119.3, ut: 125.4, st: 128.0, ct: 128.8, pa: 118.0, so: 43.1, ne: 37.4 },
+      category3: { po: 128.5, ut: 126.5, st: 127.4, ct: 125.5, pa: 115.1, so: 51.0, ne: 26.0 },
     },
     prazdninove: {
-      category1: { po: 13.5, ut: 13.9, st: 14.1, ct: 14.2, pa: 14.6, so: 14.6, ne: 15.1 },
-      category2: { po: 15.2, ut: 15.3, st: 15.4, ct: 15.4, pa: 15.2, so: 12.0, ne: 11.5 },
-      category3: { po: 15.4, ut: 15.4, st: 15.5, ct: 15.5, pa: 15.3, so: 11.6, ne: 11.3 },
+      category1: { po: 95.1, ut: 91.9, st: 96.8, ct: 102.4, pa: 116.4, so: 97.5, ne: 99.9 },
+      category2: { po: 119.5, ut: 124.0, st: 126.7, ct: 127.8, pa: 118.8, so: 44.5, ne: 38.7 },
+      category3: { po: 128.8, ut: 128.3, st: 129.9, ct: 128.1, pa: 111.4, so: 46.9, ne: 26.6 },
     },
     podzimni: {
-      category1: { po: 13.9, ut: 14.4, st: 14.6, ct: 14.6, pa: 14.9, so: 13.5, ne: 14.1 },
-      category2: { po: 15.5, ut: 15.5, st: 15.6, ct: 15.6, pa: 15.4, so: 11.6, ne: 10.8 },
-      category3: { po: 15.7, ut: 15.6, st: 15.7, ct: 15.7, pa: 15.5, so: 11.2, ne: 10.6 },
+      category1: { po: 97.5, ut: 96.9, st: 101.2, ct: 105.6, pa: 119.8, so: 86.1, ne: 92.9 },
+      category2: { po: 120.6, ut: 125.3, st: 126.8, ct: 126.8, pa: 119.6, so: 44.3, ne: 36.6 },
+      category3: { po: 127.2, ut: 126.3, st: 127.7, ct: 124.9, pa: 115.7, so: 52.1, ne: 26.1 },
     },
     zimni: {
-      category1: { po: 14.0, ut: 14.5, st: 14.7, ct: 14.7, pa: 15.0, so: 13.3, ne: 13.8 },
-      category2: { po: 15.6, ut: 15.6, st: 15.7, ct: 15.7, pa: 15.5, so: 11.4, ne: 10.5 },
-      category3: { po: 15.8, ut: 15.7, st: 15.8, ct: 15.8, pa: 15.6, so: 11.0, ne: 10.3 },
+      category1: { po: 98.0, ut: 99.4, st: 103.3, ct: 107.8, pa: 119.0, so: 88.3, ne: 84.2 },
+      category2: { po: 118.7, ut: 127.1, st: 128.8, ct: 129.0, pa: 117.7, so: 42.9, ne: 35.8 },
+      category3: { po: 127.8, ut: 128.3, st: 127.5, ct: 125.5, pa: 113.5, so: 50.0, ne: 27.4 },
     },
   },
 
   // Dálnice D-II
   'D-II': {
     jarni: {
-      category1: { po: 13.7, ut: 14.2, st: 14.4, ct: 14.4, pa: 14.7, so: 13.8, ne: 14.8 },
-      category2: { po: 15.3, ut: 15.4, st: 15.5, ct: 15.5, pa: 15.3, so: 11.9, ne: 11.1 },
-      category3: { po: 15.5, ut: 15.5, st: 15.6, ct: 15.6, pa: 15.4, so: 11.5, ne: 10.9 },
+      category1: { po: 97.1, ut: 97.0, st: 102.3, ct: 106.1, pa: 119.0, so: 89.3, ne: 89.2 },
+      category2: { po: 122.1, ut: 126.5, st: 127.9, ct: 129.9, pa: 123.3, so: 38.9, ne: 31.4 },
+      category3: { po: 132.4, ut: 126.8, st: 128.1, ct: 129.2, pa: 119.5, so: 40.2, ne: 23.8 },
     },
     prazdninove: {
-      category1: { po: 13.4, ut: 13.8, st: 14.0, ct: 14.1, pa: 14.5, so: 14.7, ne: 15.5 },
-      category2: { po: 15.1, ut: 15.2, st: 15.3, ct: 15.3, pa: 15.2, so: 12.1, ne: 11.8 },
-      category3: { po: 15.3, ut: 15.3, st: 15.4, ct: 15.4, pa: 15.3, so: 11.7, ne: 11.6 },
+      category1: { po: 95.4, ut: 93.4, st: 97.8, ct: 101.3, pa: 115.5, so: 98.9, ne: 97.7 },
+      category2: { po: 121.3, ut: 124.3, st: 125.9, ct: 128.1, pa: 122.7, so: 42.5, ne: 35.2 },
+      category3: { po: 131.1, ut: 128.5, st: 129.7, ct: 129.8, pa: 114.8, so: 40.3, ne: 25.8 },
     },
     podzimni: {
-      category1: { po: 13.8, ut: 14.3, st: 14.5, ct: 14.5, pa: 14.8, so: 13.6, ne: 14.5 },
-      category2: { po: 15.4, ut: 15.5, st: 15.6, ct: 15.6, pa: 15.4, so: 11.7, ne: 10.8 },
-      category3: { po: 15.6, ut: 15.6, st: 15.7, ct: 15.7, pa: 15.5, so: 11.3, ne: 10.6 },
+      category1: { po: 97.7, ut: 97.9, st: 101.8, ct: 105.3, pa: 119.3, so: 87.5, ne: 90.5 },
+      category2: { po: 121.9, ut: 125.8, st: 126.4, ct: 128.6, pa: 125.2, so: 40.4, ne: 31.7 },
+      category3: { po: 130.0, ut: 126.4, st: 126.8, ct: 128.0, pa: 121.5, so: 42.3, ne: 25.0 },
     },
     zimni: {
-      category1: { po: 13.9, ut: 14.4, st: 14.6, ct: 14.6, pa: 14.9, so: 13.4, ne: 14.2 },
-      category2: { po: 15.5, ut: 15.6, st: 15.7, ct: 15.7, pa: 15.5, so: 11.5, ne: 10.5 },
-      category3: { po: 15.7, ut: 15.7, st: 15.8, ct: 15.8, pa: 15.6, so: 11.1, ne: 10.3 },
+      category1: { po: 98.4, ut: 99.1, st: 102.6, ct: 107.1, pa: 118.4, so: 90.8, ne: 83.6 },
+      category2: { po: 118.8, ut: 128.1, st: 128.4, ct: 131.0, pa: 124.1, so: 40.0, ne: 29.6 },
+      category3: { po: 127.7, ut: 128.4, st: 128.8, ct: 129.0, pa: 119.7, so: 41.6, ne: 24.8 },
     },
   },
 
   // Silnice E
   'E': {
     jarni: {
-      category1: { po: 13.9, ut: 14.3, st: 14.5, ct: 14.5, pa: 14.8, so: 13.6, ne: 14.4 },
-      category2: { po: 15.5, ut: 15.5, st: 15.6, ct: 15.6, pa: 15.4, so: 11.6, ne: 10.8 },
-      category3: { po: 15.7, ut: 15.6, st: 15.7, ct: 15.7, pa: 15.5, so: 11.2, ne: 10.6 },
+      category1: { po: 98.7, ut: 96.4, st: 102.2, ct: 106.6, pa: 120.6, so: 88.3, ne: 87.2 },
+      category2: { po: 121.8, ut: 126.0, st: 127.2, ct: 130.1, pa: 125.9, so: 39.4, ne: 29.6 },
+      category3: { po: 134.8, ut: 128.5, st: 128.3, ct: 130.1, pa: 118.4, so: 37.0, ne: 22.9 },
     },
     prazdninove: {
-      category1: { po: 13.6, ut: 14.0, st: 14.2, ct: 14.3, pa: 14.6, so: 14.4, ne: 14.9 },
-      category2: { po: 15.3, ut: 15.4, st: 15.5, ct: 15.5, pa: 15.3, so: 11.9, ne: 11.1 },
-      category3: { po: 15.5, ut: 15.5, st: 15.6, ct: 15.6, pa: 15.4, so: 11.5, ne: 10.9 },
+      category1: { po: 94.7, ut: 91.3, st: 96.2, ct: 100.9, pa: 115.2, so: 104.6, ne: 97.1 },
+      category2: { po: 122.3, ut: 124.5, st: 126.0, ct: 126.7, pa: 122.5, so: 42.2, ne: 35.8 },
+      category3: { po: 135.5, ut: 130.3, st: 129.5, ct: 129.7, pa: 112.0, so: 35.9, ne: 27.1 },
     },
     podzimni: {
-      category1: { po: 14.0, ut: 14.4, st: 14.6, ct: 14.6, pa: 14.9, so: 13.4, ne: 14.1 },
-      category2: { po: 15.6, ut: 15.6, st: 15.7, ct: 15.7, pa: 15.5, so: 11.4, ne: 10.5 },
-      category3: { po: 15.8, ut: 15.7, st: 15.8, ct: 15.8, pa: 15.6, so: 11.0, ne: 10.3 },
+      category1: { po: 99.0, ut: 96.5, st: 101.0, ct: 104.7, pa: 119.3, so: 88.6, ne: 90.9 },
+      category2: { po: 122.5, ut: 125.9, st: 127.4, ct: 127.9, pa: 124.7, so: 40.9, ne: 30.7 },
+      category3: { po: 133.6, ut: 127.8, st: 129.7, ct: 128.7, pa: 119.0, so: 38.5, ne: 22.7 },
     },
     zimni: {
-      category1: { po: 14.1, ut: 14.5, st: 14.7, ct: 14.7, pa: 15.0, so: 13.2, ne: 13.8 },
-      category2: { po: 15.7, ut: 15.7, st: 15.8, ct: 15.8, pa: 15.6, so: 11.2, ne: 10.2 },
-      category3: { po: 15.9, ut: 15.8, st: 15.9, ct: 15.9, pa: 15.7, so: 10.8, ne: 10.0 },
+      category1: { po: 102.4, ut: 100.2, st: 104.2, ct: 108.1, pa: 119.4, so: 86.1, ne: 79.6 },
+      category2: { po: 121.7, ut: 129.4, st: 129.8, ct: 131.4, pa: 123.8, so: 36.7, ne: 27.2 },
+      category3: { po: 131.5, ut: 129.8, st: 129.3, ct: 130.1, pa: 117.6, so: 38.0, ne: 23.7 },
     },
   },
 
   // Silnice I
   'I': {
     jarni: {
-      category1: { po: 14.0, ut: 14.4, st: 14.6, ct: 14.6, pa: 14.9, so: 13.4, ne: 14.1 },
-      category2: { po: 15.6, ut: 15.6, st: 15.7, ct: 15.7, pa: 15.5, so: 11.4, ne: 10.5 },
-      category3: { po: 15.8, ut: 15.7, st: 15.8, ct: 15.8, pa: 15.6, so: 11.0, ne: 10.3 },
+      category1: { po: 103.2, ut: 101.1, st: 105.8, ct: 107.5, pa: 117.9, so: 87.2, ne: 77.3 },
+      category2: { po: 124.9, ut: 127.5, st: 129.9, ct: 130.9, pa: 125.8, so: 36.5, ne: 24.5 },
+      category3: { po: 139.0, ut: 128.2, st: 129.2, ct: 130.7, pa: 123.0, so: 30.4, ne: 19.5 },
     },
     prazdninove: {
-      category1: { po: 13.7, ut: 14.1, st: 14.3, ct: 14.4, pa: 14.7, so: 14.2, ne: 14.6 },
-      category2: { po: 15.4, ut: 15.5, st: 15.6, ct: 15.6, pa: 15.4, so: 11.7, ne: 10.8 },
-      category3: { po: 15.6, ut: 15.6, st: 15.7, ct: 15.7, pa: 15.5, so: 11.3, ne: 10.6 },
+      category1: { po: 101.3, ut: 98.7, st: 103.1, ct: 104.9, pa: 113.9, so: 94.0, ne: 84.1 },
+      category2: { po: 125.6, ut: 125.9, st: 128.5, ct: 129.8, pa: 125.0, so: 37.5, ne: 27.7 },
+      category3: { po: 140.1, ut: 127.9, st: 129.4, ct: 131.2, pa: 121.0, so: 28.8, ne: 21.6 },
     },
     podzimni: {
-      category1: { po: 14.1, ut: 14.5, st: 14.7, ct: 14.7, pa: 15.0, so: 13.2, ne: 13.8 },
-      category2: { po: 15.7, ut: 15.7, st: 15.8, ct: 15.8, pa: 15.6, so: 11.2, ne: 10.2 },
-      category3: { po: 15.9, ut: 15.8, st: 15.9, ct: 15.9, pa: 15.7, so: 10.8, ne: 10.0 },
+      category1: { po: 103.8, ut: 101.1, st: 104.7, ct: 106.2, pa: 117.7, so: 87.2, ne: 79.3 },
+      category2: { po: 125.4, ut: 125.9, st: 128.4, ct: 128.9, pa: 126.9, so: 38.6, ne: 25.9 },
+      category3: { po: 139.3, ut: 126.8, st: 128.2, ct: 128.2, pa: 124.6, so: 31.6, ne: 21.3 },
     },
     zimni: {
-      category1: { po: 14.2, ut: 14.6, st: 14.8, ct: 14.8, pa: 15.1, so: 13.0, ne: 13.5 },
-      category2: { po: 15.8, ut: 15.8, st: 15.9, ct: 15.9, pa: 15.7, so: 11.0, ne: 9.9 },
-      category3: { po: 16.0, ut: 15.9, st: 16.0, ct: 16.0, pa: 15.8, so: 10.6, ne: 9.7 },
+      category1: { po: 106.4, ut: 103.5, st: 107.5, ct: 108.8, pa: 118.8, so: 83.2, ne: 71.8 },
+      category2: { po: 126.7, ut: 129.0, st: 132.0, ct: 132.4, pa: 125.1, so: 32.0, ne: 22.8 },
+      category3: { po: 136.8, ut: 128.5, st: 129.3, ct: 130.1, pa: 124.3, so: 30.3, ne: 20.7 },
     },
   },
 
   // Silnice II-H
   'II-H': {
     jarni: {
-      category1: { po: 14.1, ut: 14.5, st: 14.7, ct: 14.7, pa: 15.0, so: 13.2, ne: 13.8 },
-      category2: { po: 15.7, ut: 15.7, st: 15.8, ct: 15.8, pa: 15.6, so: 11.2, ne: 10.2 },
-      category3: { po: 15.9, ut: 15.8, st: 15.9, ct: 15.9, pa: 15.7, so: 10.8, ne: 10.0 },
+      category1: { po: 107.3, ut: 102.4, st: 108.6, ct: 107.9, pa: 117.8, so: 84.4, ne: 71.6 },
+      category2: { po: 122.0, ut: 119.8, st: 125.4, ct: 125.1, pa: 124.1, so: 47.7, ne: 35.9 },
+      category3: { po: 130.0, ut: 124.9, st: 129.7, ct: 132.6, pa: 127.8, so: 32.0, ne: 23.0 },
     },
     prazdninove: {
-      category1: { po: 13.8, ut: 14.2, st: 14.4, ct: 14.5, pa: 14.8, so: 14.0, ne: 14.3 },
-      category2: { po: 15.5, ut: 15.6, st: 15.7, ct: 15.7, pa: 15.5, so: 11.5, ne: 10.5 },
-      category3: { po: 15.7, ut: 15.7, st: 15.8, ct: 15.8, pa: 15.6, so: 11.1, ne: 10.3 },
+      category1: { po: 103.9, ut: 101.5, st: 104.9, ct: 109.4, pa: 114.9, so: 88.2, ne: 77.2 },
+      category2: { po: 123.5, ut: 122.5, st: 123.4, ct: 123.5, pa: 123.9, so: 47.9, ne: 35.3 },
+      category3: { po: 129.0, ut: 123.0, st: 124.0, ct: 124.8, pa: 128.3, so: 40.6, ne: 30.3 },
     },
     podzimni: {
-      category1: { po: 14.2, ut: 14.6, st: 14.8, ct: 14.8, pa: 15.1, so: 13.0, ne: 13.5 },
-      category2: { po: 15.8, ut: 15.8, st: 15.9, ct: 15.9, pa: 15.7, so: 11.0, ne: 9.9 },
-      category3: { po: 16.0, ut: 15.9, st: 16.0, ct: 16.0, pa: 15.8, so: 10.6, ne: 9.7 },
+      category1: { po: 107.1, ut: 104.8, st: 107.3, ct: 108.7, pa: 116.6, so: 84.0, ne: 71.5 },
+      category2: { po: 118.3, ut: 122.6, st: 121.3, ct: 123.9, pa: 129.2, so: 50.7, ne: 34.0 },
+      category3: { po: 126.7, ut: 127.9, st: 127.0, ct: 128.9, pa: 129.1, so: 35.3, ne: 25.1 },
     },
     zimni: {
-      category1: { po: 14.3, ut: 14.7, st: 14.9, ct: 14.9, pa: 15.2, so: 12.8, ne: 13.2 },
-      category2: { po: 15.9, ut: 15.9, st: 16.0, ct: 16.0, pa: 15.8, so: 10.8, ne: 9.6 },
-      category3: { po: 16.1, ut: 16.0, st: 16.1, ct: 16.1, pa: 15.9, so: 10.4, ne: 9.4 },
+      category1: { po: 109.5, ut: 103.9, st: 107.1, ct: 109.4, pa: 117.4, so: 83.0, ne: 69.7 },
+      category2: { po: 122.0, ut: 128.5, st: 128.5, ct: 126.2, pa: 122.0, so: 42.8, ne: 30.0 },
+      category3: { po: 134.2, ut: 127.0, st: 129.3, ct: 122.3, pa: 123.2, so: 34.9, ne: 29.1 },
     },
   },
 
   // Silnice II-S
   'II-S': {
     jarni: {
-      category1: { po: 14.2, ut: 14.6, st: 14.8, ct: 14.8, pa: 15.1, so: 13.0, ne: 13.5 },
-      category2: { po: 15.8, ut: 15.8, st: 15.9, ct: 15.9, pa: 15.7, so: 11.0, ne: 9.9 },
-      category3: { po: 16.0, ut: 15.9, st: 16.0, ct: 16.0, pa: 15.8, so: 10.6, ne: 9.7 },
+      category1: { po: 103.5, ut: 100.6, st: 103.5, ct: 104.3, pa: 120.0, so: 89.9, ne: 78.2 },
+      category2: { po: 122.4, ut: 119.4, st: 121.8, ct: 117.5, pa: 119.3, so: 56.3, ne: 43.3 },
+      category3: { po: 122.5, ut: 120.0, st: 124.1, ct: 123.9, pa: 123.5, so: 47.3, ne: 38.7 },
     },
     prazdninove: {
-      category1: { po: 13.9, ut: 14.3, st: 14.5, ct: 14.6, pa: 14.9, so: 13.8, ne: 14.0 },
-      category2: { po: 15.6, ut: 15.7, st: 15.8, ct: 15.8, pa: 15.6, so: 11.3, ne: 10.2 },
-      category3: { po: 15.8, ut: 15.8, st: 15.9, ct: 15.9, pa: 15.7, so: 10.9, ne: 10.0 },
+      category1: { po: 98.5, ut: 98.0, st: 100.8, ct: 103.0, pa: 114.0, so: 96.3, ne: 89.4 },
+      category2: { po: 125.5, ut: 123.4, st: 126.5, ct: 119.8, pa: 123.4, so: 47.1, ne: 34.3 },
+      category3: { po: 120.2, ut: 116.2, st: 123.6, ct: 120.0, pa: 122.3, so: 54.1, ne: 43.6 },
     },
     podzimni: {
-      category1: { po: 14.3, ut: 14.7, st: 14.9, ct: 14.9, pa: 15.2, so: 12.8, ne: 13.2 },
-      category2: { po: 15.9, ut: 15.9, st: 16.0, ct: 16.0, pa: 15.8, so: 10.8, ne: 9.6 },
-      category3: { po: 16.1, ut: 16.0, st: 16.1, ct: 16.1, pa: 15.9, so: 10.4, ne: 9.4 },
+      category1: { po: 102.2, ut: 100.7, st: 102.7, ct: 104.6, pa: 118.9, so: 90.3, ne: 80.6 },
+      category2: { po: 121.0, ut: 117.5, st: 121.2, ct: 117.7, pa: 125.0, so: 56.3, ne: 41.3 },
+      category3: { po: 122.8, ut: 119.2, st: 122.6, ct: 118.9, pa: 123.8, so: 51.2, ne: 41.5 },
     },
     zimni: {
-      category1: { po: 14.4, ut: 14.8, st: 15.0, ct: 15.0, pa: 15.3, so: 12.6, ne: 12.9 },
-      category2: { po: 16.0, ut: 16.0, st: 16.1, ct: 16.1, pa: 15.9, so: 10.6, ne: 9.3 },
-      category3: { po: 16.2, ut: 16.1, st: 16.2, ct: 16.2, pa: 16.0, so: 10.2, ne: 9.1 },
+      category1: { po: 106.4, ut: 100.9, st: 104.3, ct: 105.7, pa: 120.4, so: 86.9, ne: 75.4 },
+      category2: { po: 116.6, ut: 126.2, st: 126.6, ct: 123.5, pa: 127.4, so: 44.9, ne: 34.8 },
+      category3: { po: 126.4, ut: 127.6, st: 125.1, ct: 118.0, pa: 118.4, so: 46.2, ne: 38.3 },
     },
   },
 
   // Silnice II-R-L (rekreační letní)
   'II-R-L': {
     jarni: {
-      category1: { po: 14.3, ut: 14.7, st: 14.9, ct: 14.9, pa: 15.2, so: 12.8, ne: 13.2 },
-      category2: { po: 15.9, ut: 15.9, st: 16.0, ct: 16.0, pa: 15.8, so: 10.8, ne: 9.6 },
-      category3: { po: 16.1, ut: 16.0, st: 16.1, ct: 16.1, pa: 15.9, so: 10.4, ne: 9.4 },
+      category1: { po: 91.4, ut: 92.1, st: 95.0, ct: 96.5, pa: 113.8, so: 113.7, ne: 97.5 },
+      category2: { po: 122.0, ut: 119.8, st: 125.4, ct: 125.1, pa: 124.1, so: 47.7, ne: 35.9 },
+      category3: { po: 130.0, ut: 124.9, st: 129.7, ct: 132.6, pa: 127.8, so: 32.0, ne: 23.0 },
     },
     prazdninove: {
-      category1: { po: 14.0, ut: 14.4, st: 14.6, ct: 14.7, pa: 15.0, so: 13.6, ne: 13.7 },
-      category2: { po: 15.7, ut: 15.8, st: 15.9, ct: 15.9, pa: 15.7, so: 11.1, ne: 9.9 },
-      category3: { po: 15.9, ut: 15.9, st: 16.0, ct: 16.0, pa: 15.8, so: 10.7, ne: 9.7 },
+      category1: { po: 90.7, ut: 89.4, st: 91.3, ct: 98.1, pa: 101.3, so: 114.4, ne: 114.8 },
+      category2: { po: 123.5, ut: 122.5, st: 123.4, ct: 123.5, pa: 123.9, so: 47.9, ne: 35.3 },
+      category3: { po: 129.0, ut: 123.0, st: 124.0, ct: 124.8, pa: 128.3, so: 40.6, ne: 30.3 },
     },
     podzimni: {
-      category1: { po: 14.4, ut: 14.8, st: 15.0, ct: 15.0, pa: 15.3, so: 12.6, ne: 12.9 },
-      category2: { po: 16.0, ut: 16.0, st: 16.1, ct: 16.1, pa: 15.9, so: 10.6, ne: 9.3 },
-      category3: { po: 16.2, ut: 16.1, st: 16.2, ct: 16.2, pa: 16.0, so: 10.2, ne: 9.1 },
+      category1: { po: 88.7, ut: 92.0, st: 96.0, ct: 96.7, pa: 114.6, so: 108.0, ne: 104.0 },
+      category2: { po: 118.3, ut: 122.6, st: 121.3, ct: 123.9, pa: 129.2, so: 50.7, ne: 34.0 },
+      category3: { po: 126.7, ut: 127.9, st: 127.0, ct: 128.9, pa: 129.1, so: 35.3, ne: 25.1 },
     },
     zimni: {
-      category1: { po: 14.5, ut: 14.9, st: 15.1, ct: 15.1, pa: 15.4, so: 12.4, ne: 12.6 },
-      category2: { po: 16.1, ut: 16.1, st: 16.2, ct: 16.2, pa: 16.0, so: 10.4, ne: 9.0 },
-      category3: { po: 16.3, ut: 16.2, st: 16.3, ct: 16.3, pa: 16.1, so: 10.0, ne: 8.8 },
+      category1: { po: 91.3, ut: 95.3, st: 97.1, ct: 103.7, pa: 122.2, so: 104.2, ne: 86.2 },
+      category2: { po: 122.0, ut: 128.5, st: 128.5, ct: 126.2, pa: 122.0, so: 42.8, ne: 30.0 },
+      category3: { po: 134.2, ut: 127.0, st: 129.3, ct: 122.3, pa: 123.2, so: 34.9, ne: 29.1 },
     },
   },
 
   // Silnice II-R-Z (rekreační zimní)
   'II-R-Z': {
     jarni: {
-      category1: { po: 14.4, ut: 14.8, st: 15.0, ct: 15.0, pa: 15.3, so: 12.6, ne: 12.9 },
-      category2: { po: 16.0, ut: 16.0, st: 16.1, ct: 16.1, pa: 15.9, so: 10.6, ne: 9.3 },
-      category3: { po: 16.2, ut: 16.1, st: 16.2, ct: 16.2, pa: 16.0, so: 10.2, ne: 9.1 },
+      category1: { po: 89.8, ut: 90.6, st: 96.7, ct: 99.5, pa: 114.6, so: 110.0, ne: 98.8 },
+      category2: { po: 122.0, ut: 119.8, st: 125.4, ct: 125.1, pa: 124.1, so: 47.7, ne: 35.9 },
+      category3: { po: 130.0, ut: 124.9, st: 129.7, ct: 132.6, pa: 127.8, so: 32.0, ne: 23.0 },
     },
     prazdninove: {
-      category1: { po: 14.1, ut: 14.5, st: 14.7, ct: 14.8, pa: 15.1, so: 13.4, ne: 13.4 },
-      category2: { po: 15.8, ut: 15.9, st: 16.0, ct: 16.0, pa: 15.8, so: 10.9, ne: 9.6 },
-      category3: { po: 16.0, ut: 16.0, st: 16.1, ct: 16.1, pa: 15.9, so: 10.5, ne: 9.4 },
+      category1: { po: 92.8, ut: 90.9, st: 94.2, ct: 98.1, pa: 101.1, so: 113.7, ne: 109.2 },
+      category2: { po: 123.5, ut: 122.5, st: 123.4, ct: 123.5, pa: 123.9, so: 47.9, ne: 35.3 },
+      category3: { po: 129.0, ut: 123.0, st: 124.0, ct: 124.8, pa: 128.3, so: 40.6, ne: 30.3 },
     },
     podzimni: {
-      category1: { po: 14.5, ut: 14.9, st: 15.1, ct: 15.1, pa: 15.4, so: 12.4, ne: 12.6 },
-      category2: { po: 16.1, ut: 16.1, st: 16.2, ct: 16.2, pa: 16.0, so: 10.4, ne: 9.0 },
-      category3: { po: 16.3, ut: 16.2, st: 16.3, ct: 16.3, pa: 16.1, so: 10.0, ne: 8.8 },
+      category1: { po: 90.7, ut: 96.0, st: 95.1, ct: 100.3, pa: 117.7, so: 105.5, ne: 94.7 },
+      category2: { po: 118.3, ut: 122.6, st: 121.3, ct: 123.9, pa: 129.2, so: 50.7, ne: 34.0 },
+      category3: { po: 126.7, ut: 127.9, st: 127.0, ct: 128.9, pa: 129.1, so: 35.3, ne: 25.1 },
     },
     zimni: {
-      category1: { po: 14.6, ut: 15.0, st: 15.2, ct: 15.2, pa: 15.5, so: 12.2, ne: 12.3 },
-      category2: { po: 16.2, ut: 16.2, st: 16.3, ct: 16.3, pa: 16.1, so: 10.2, ne: 8.7 },
-      category3: { po: 16.4, ut: 16.3, st: 16.4, ct: 16.4, pa: 16.2, so: 9.8, ne: 8.5 },
+      category1: { po: 83.4, ut: 86.8, st: 93.6, ct: 89.8, pa: 103.8, so: 130.5, ne: 112.1 },
+      category2: { po: 122.0, ut: 128.5, st: 128.5, ct: 126.2, pa: 122.0, so: 42.8, ne: 30.0 },
+      category3: { po: 134.2, ut: 127.0, st: 129.3, ct: 122.3, pa: 123.2, so: 34.9, ne: 29.1 },
     },
   },
 
   // Místní komunikace M
   'M': {
     jarni: {
-      category1: { po: 14.2, ut: 14.6, st: 14.8, ct: 14.8, pa: 15.1, so: 13.0, ne: 13.5 },
-      category2: { po: 15.8, ut: 15.8, st: 15.9, ct: 15.9, pa: 15.7, so: 11.0, ne: 9.9 },
-      category3: { po: 16.0, ut: 15.9, st: 16.0, ct: 16.0, pa: 15.8, so: 10.6, ne: 9.7 },
+      category1: { po: 115.2, ut: 110.6, st: 113.8, ct: 113.6, pa: 122.0, so: 68.6, ne: 56.2 },
+      category2: { po: 122.4, ut: 119.4, st: 121.8, ct: 117.5, pa: 119.3, so: 56.3, ne: 43.3 },
+      category3: { po: 122.5, ut: 120.0, st: 124.1, ct: 123.9, pa: 123.5, so: 47.3, ne: 38.7 },
     },
     prazdninove: {
-      category1: { po: 13.9, ut: 14.3, st: 14.5, ct: 14.6, pa: 14.9, so: 13.8, ne: 14.0 },
-      category2: { po: 15.6, ut: 15.7, st: 15.8, ct: 15.8, pa: 15.6, so: 11.3, ne: 10.2 },
-      category3: { po: 15.8, ut: 15.8, st: 15.9, ct: 15.9, pa: 15.7, so: 10.9, ne: 10.0 },
+      category1: { po: 116.7, ut: 111.8, st: 112.4, ct: 113.3, pa: 115.0, so: 70.1, ne: 60.7 },
+      category2: { po: 125.5, ut: 123.4, st: 126.5, ct: 119.8, pa: 123.4, so: 47.1, ne: 34.3 },
+      category3: { po: 120.2, ut: 116.2, st: 123.6, ct: 120.0, pa: 122.3, so: 54.1, ne: 43.6 },
     },
     podzimni: {
-      category1: { po: 14.3, ut: 14.7, st: 14.9, ct: 14.9, pa: 15.2, so: 12.8, ne: 13.2 },
-      category2: { po: 15.9, ut: 15.9, st: 16.0, ct: 16.0, pa: 15.8, so: 10.8, ne: 9.6 },
-      category3: { po: 16.1, ut: 16.0, st: 16.1, ct: 16.1, pa: 15.9, so: 10.4, ne: 9.4 },
+      category1: { po: 114.6, ut: 112.5, st: 114.3, ct: 115.6, pa: 118.3, so: 68.4, ne: 56.3 },
+      category2: { po: 121.0, ut: 117.5, st: 121.2, ct: 117.7, pa: 125.0, so: 56.3, ne: 41.3 },
+      category3: { po: 122.8, ut: 119.2, st: 122.6, ct: 118.9, pa: 123.8, so: 51.2, ne: 41.5 },
     },
     zimni: {
-      category1: { po: 14.4, ut: 14.8, st: 15.0, ct: 15.0, pa: 15.3, so: 12.6, ne: 12.9 },
-      category2: { po: 16.0, ut: 16.0, st: 16.1, ct: 16.1, pa: 15.9, so: 10.6, ne: 9.3 },
-      category3: { po: 16.2, ut: 16.1, st: 16.2, ct: 16.2, pa: 16.0, so: 10.2, ne: 9.1 },
+      category1: { po: 117.0, ut: 112.0, st: 114.1, ct: 114.0, pa: 118.5, so: 66.9, ne: 57.5 },
+      category2: { po: 116.6, ut: 126.2, st: 126.6, ct: 123.5, pa: 127.4, so: 44.9, ne: 34.8 },
+      category3: { po: 126.4, ut: 127.6, st: 125.1, ct: 118.0, pa: 118.4, so: 46.2, ne: 38.3 },
     },
   },
 };
@@ -331,71 +337,76 @@ export const WEEKLY_VARIATION: Record<RoadType, Record<Season, Record<string, Re
 // ROČNÍ VARIACE (Příloha 3.1-3.6) - podíly měsíců na ročním průměru
 // =============================================================================
 
-// Struktura: [roadType][vehicleCategory][month] = koeficient
-// month: 1-12 (leden = 1, prosinec = 12)
+// OPRAVENO: Hodnoty PŘESNĚ převzaty z TP 189 PDF
+// Tyto hodnoty představují p_i^r (podíl měsíčního průměru k ročnímu průměru RPDI)
+// SUMUJÍ SE NA ~1200% (12 měsíců × 100% průměr)
+// Pro výpočet koeficientu k_t,RPDI se použije: k_t,RPDI = 100 / p_i^r
+
+// Struktura: [roadType][vehicleCategory][month] = p_i^r v %
+// month index: 0 = leden, 11 = prosinec
 
 export const YEARLY_VARIATION: Record<RoadType, Record<string, number[]>> = {
-  // Dálnice D-I (Příloha 3.1)
+  // Dálnice D-I (Příloha 3.1, 3.3, 3.5)
   'D-I': {
     // Index 0 = leden, index 11 = prosinec
-    category1: [7.2, 7.5, 8.3, 8.5, 8.7, 8.9, 9.3, 9.2, 8.6, 8.5, 7.9, 7.4],
-    category2: [7.8, 7.9, 8.5, 8.6, 8.7, 8.7, 8.9, 8.8, 8.6, 8.7, 8.4, 8.4],
-    category3: [7.9, 8.0, 8.6, 8.7, 8.7, 8.7, 8.8, 8.7, 8.6, 8.7, 8.5, 8.5],
+    category1: [83.6, 87.6, 96.5, 101.7, 106.1, 108.0, 108.2, 110.7, 103.4, 101.8, 98.5, 93.9],
+    category2: [83.7, 87.4, 97.7, 103.8, 105.0, 108.2, 100.8, 98.2, 104.9, 105.8, 105.3, 99.2],
+    category3: [85.6, 90.8, 99.5, 104.5, 105.3, 108.3, 98.3, 92.6, 102.9, 105.2, 107.7, 99.3],
   },
 
   // Dálnice D-II
   'D-II': {
-    category1: [7.1, 7.4, 8.2, 8.4, 8.6, 9.0, 9.4, 9.3, 8.7, 8.6, 7.9, 7.4],
-    category2: [7.7, 7.8, 8.4, 8.5, 8.7, 8.8, 9.0, 8.9, 8.7, 8.8, 8.5, 8.4],
-    category3: [7.8, 7.9, 8.5, 8.6, 8.7, 8.8, 8.9, 8.8, 8.7, 8.8, 8.6, 8.5],
+    category1: [84.9, 90.0, 93.2, 99.3, 103.8, 106.7, 111.7, 114.6, 106.2, 102.2, 94.7, 92.7],
+    category2: [84.3, 89.1, 94.5, 102.7, 105.1, 105.3, 103.9, 101.0, 109.2, 109.5, 101.6, 93.8],
+    category3: [84.8, 89.4, 95.4, 102.3, 104.3, 105.9, 101.8, 96.5, 107.9, 111.2, 103.0, 97.5],
   },
 
   // Silnice E
   'E': {
-    category1: [7.3, 7.6, 8.3, 8.5, 8.7, 8.9, 9.2, 9.1, 8.6, 8.5, 7.9, 7.4],
-    category2: [7.9, 8.0, 8.6, 8.7, 8.7, 8.7, 8.8, 8.7, 8.6, 8.7, 8.5, 8.5],
-    category3: [8.0, 8.1, 8.7, 8.8, 8.8, 8.7, 8.8, 8.7, 8.6, 8.7, 8.6, 8.6],
+    category1: [81.7, 88.5, 92.1, 98.2, 102.3, 106.6, 110.8, 115.4, 106.6, 103.3, 97.7, 96.8],
+    category2: [83.4, 89.0, 95.1, 100.2, 103.6, 103.7, 100.9, 103.0, 105.7, 104.8, 109.5, 101.1],
+    category3: [87.5, 95.3, 101.1, 103.6, 104.8, 101.4, 95.3, 95.8, 102.9, 103.3, 108.0, 101.0],
   },
 
   // Silnice I
   'I': {
-    category1: [7.4, 7.7, 8.4, 8.5, 8.7, 8.8, 9.1, 9.0, 8.6, 8.5, 7.9, 7.4],
-    category2: [8.0, 8.1, 8.7, 8.8, 8.8, 8.7, 8.7, 8.6, 8.6, 8.7, 8.6, 8.6],
-    category3: [8.1, 8.2, 8.8, 8.9, 8.9, 8.7, 8.6, 8.5, 8.6, 8.7, 8.7, 8.7],
+    category1: [86.8, 91.2, 95.9, 101.0, 102.6, 103.7, 106.3, 108.6, 106.8, 104.0, 96.0, 97.1],
+    category2: [79.5, 84.4, 92.5, 104.5, 107.9, 106.5, 106.0, 105.1, 111.6, 106.8, 101.5, 93.7],
+    category3: [83.6, 93.2, 99.1, 104.6, 105.7, 103.0, 102.2, 100.0, 110.9, 108.7, 97.3, 91.7],
   },
 
   // Silnice II-H
   'II-H': {
-    category1: [7.5, 7.8, 8.4, 8.6, 8.7, 8.8, 9.0, 8.9, 8.6, 8.5, 7.9, 7.4],
-    category2: [8.1, 8.2, 8.8, 8.9, 8.9, 8.7, 8.6, 8.5, 8.6, 8.7, 8.7, 8.7],
-    category3: [8.2, 8.3, 8.9, 9.0, 9.0, 8.7, 8.5, 8.4, 8.6, 8.7, 8.8, 8.8],
+    category1: [86.9, 91.9, 98.5, 100.2, 107.6, 108.9, 108.7, 105.7, 106.7, 97.9, 95.7, 91.3],
+    category2: [79.5, 84.4, 92.5, 104.5, 107.9, 106.5, 106.0, 105.1, 111.6, 106.8, 101.5, 93.7],
+    category3: [83.6, 93.2, 99.1, 104.6, 105.7, 103.0, 102.2, 100.0, 110.9, 108.7, 97.3, 91.7],
   },
 
   // Silnice II-S
   'II-S': {
-    category1: [7.6, 7.9, 8.5, 8.6, 8.8, 8.7, 8.9, 8.8, 8.6, 8.5, 7.9, 7.4],
-    category2: [8.2, 8.3, 8.9, 9.0, 9.0, 8.6, 8.5, 8.4, 8.6, 8.7, 8.8, 8.8],
-    category3: [8.3, 8.4, 9.0, 9.1, 9.1, 8.6, 8.4, 8.3, 8.6, 8.7, 8.9, 8.9],
+    category1: [86.9, 91.9, 98.5, 100.2, 107.6, 108.9, 108.7, 105.7, 106.7, 97.9, 95.7, 91.3],
+    category2: [91.2, 95.2, 99.9, 100.8, 103.0, 98.6, 97.1, 95.3, 106.3, 107.6, 104.7, 100.3],
+    category3: [91.5, 95.5, 102.3, 99.4, 103.8, 97.5, 98.5, 95.0, 97.5, 105.6, 106.6, 106.8],
   },
 
   // Silnice II-R-L (rekreační letní)
   'II-R-L': {
-    category1: [7.7, 8.0, 8.5, 8.7, 8.8, 8.7, 8.8, 8.7, 8.6, 8.5, 7.9, 7.4],
-    category2: [8.3, 8.4, 9.0, 9.1, 9.1, 8.5, 8.4, 8.3, 8.6, 8.7, 8.9, 8.9],
-    category3: [8.4, 8.5, 9.1, 9.2, 9.2, 8.5, 8.3, 8.2, 8.6, 8.7, 9.0, 9.0],
+    category1: [73.1, 81.0, 83.1, 90.9, 100.6, 117.6, 142.2, 151.5, 123.1, 89.7, 79.4, 67.8],
+    category2: [79.5, 84.4, 92.5, 104.5, 107.9, 106.5, 106.0, 105.1, 111.6, 106.8, 101.5, 93.7],
+    category3: [83.6, 93.2, 99.1, 104.6, 105.7, 103.0, 102.2, 100.0, 110.9, 108.7, 97.3, 91.7],
   },
 
   // Silnice II-R-Z (rekreační zimní)
   'II-R-Z': {
-    category1: [7.8, 8.1, 8.6, 8.7, 8.9, 8.6, 8.7, 8.6, 8.6, 8.5, 7.9, 7.4],
-    category2: [8.4, 8.5, 9.1, 9.2, 9.2, 8.4, 8.3, 8.2, 8.6, 8.7, 9.0, 9.0],
-    category3: [8.5, 8.6, 9.2, 9.3, 9.3, 8.4, 8.2, 8.1, 8.6, 8.7, 9.1, 9.1],
+    category1: [105.0, 110.2, 99.2, 82.2, 90.3, 112.5, 117.6, 118.7, 106.8, 93.9, 80.3, 83.3],
+    category2: [79.5, 84.4, 92.5, 104.5, 107.9, 106.5, 106.0, 105.1, 111.6, 106.8, 101.5, 93.7],
+    category3: [83.6, 93.2, 99.1, 104.6, 105.7, 103.0, 102.2, 100.0, 110.9, 108.7, 97.3, 91.7],
   },
 
   // Místní komunikace M
   'M': {
-    category1: [7.6, 7.9, 8.5, 8.6, 8.8, 8.7, 8.9, 8.8, 8.6, 8.5, 7.9, 7.4],
-    category2: [8.2, 8.3, 8.9, 9.0, 9.0, 8.6, 8.5, 8.4, 8.6, 8.7, 8.8, 8.8],
-    category3: [8.3, 8.4, 9.0, 9.1, 9.1, 8.6, 8.4, 8.3, 8.6, 8.7, 8.9, 8.9],
+    category1: [90.8, 94.8, 101.3, 104.4, 103.9, 99.2, 96.4, 96.2, 104.2, 105.0, 102.6, 101.2],
+    category2: [91.2, 95.2, 99.9, 100.8, 103.0, 98.6, 97.1, 95.3, 106.3, 107.6, 104.7, 100.3],
+    category3: [91.5, 95.5, 102.3, 99.4, 103.8, 97.5, 98.5, 95.0, 97.5, 105.6, 106.6, 106.8],
   },
 };
