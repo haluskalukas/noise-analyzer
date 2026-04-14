@@ -6,10 +6,12 @@ import { FileUpload } from '@/components/FileUpload';
 import { NoiseChart } from '@/components/NoiseChart';
 import { Statistics } from '@/components/Statistics';
 import { TrafficCounting } from '@/components/TrafficCounting';
+import NoiseCalculator from '@/components/NoiseCalculator';
 import { NoiseData, TimeFilter, NoiseDataPoint, NoiseStats, HourlyAvg } from '@/types';
-import { HourlyTrafficCount } from '@/types/traffic';
-import { initializeHourlyCounts } from '@/lib/trafficCalculations';
+import { HourlyTrafficCount, GroupedTrafficSummary } from '@/types/traffic';
+import { initializeHourlyCounts, calculateTrafficSummary, calculateGroupedSummary, calculateTP189GroupedSummary } from '@/lib/trafficCalculations';
 import { RoadType } from '@/lib/tp189coefficients';
+import { calculateRPDI } from '@/lib/rpdiCalculator';
 import { format } from 'date-fns';
 import { cs } from 'date-fns/locale';
 
@@ -72,13 +74,15 @@ function calculateStats(points: NoiseDataPoint[]): NoiseStats {
 export default function Home() {
   const [noiseData, setNoiseData] = useState<NoiseData | null>(null);
   const [timeFilter, setTimeFilter] = useState<TimeFilter>({ type: 'all' });
-  const [activeTab, setActiveTab] = useState<'chart' | 'stats' | 'counting'>('chart');
+  const [activeTab, setActiveTab] = useState<'chart' | 'stats' | 'counting' | 'noise'>('chart');
   const [deletedIndices, setDeletedIndices] = useState<Set<number>>(new Set());
 
   // Traffic counting state (zachováváno mezi kartami)
   const [trafficCounts, setTrafficCounts] = useState<HourlyTrafficCount[]>(initializeHourlyCounts());
   const [countingDate, setCountingDate] = useState<string>(new Date().toISOString().split('T')[0]);
   const [roadType, setRoadType] = useState<RoadType>('I');
+  const [showRPDI, setShowRPDI] = useState(false);
+  const [speed, setSpeed] = useState<number>(50);
 
   // Load from localStorage on mount
   useEffect(() => {
@@ -118,6 +122,12 @@ export default function Home() {
         if (parsed.roadType) {
           setRoadType(parsed.roadType);
         }
+        if (parsed.showRPDI !== undefined) {
+          setShowRPDI(parsed.showRPDI);
+        }
+        if (parsed.speed) {
+          setSpeed(parsed.speed);
+        }
       }
     } catch (error) {
       console.error('Error loading saved state:', error);
@@ -136,6 +146,8 @@ export default function Home() {
           trafficCounts,
           countingDate,
           roadType,
+          showRPDI,
+          speed,
           timestamp: new Date().toISOString(),
         };
         localStorage.setItem(STORAGE_KEY, JSON.stringify(toSave));
@@ -143,7 +155,7 @@ export default function Home() {
         console.error('Error saving state:', error);
       }
     }
-  }, [noiseData, deletedIndices, timeFilter, activeTab, trafficCounts, countingDate, roadType]);
+  }, [noiseData, deletedIndices, timeFilter, activeTab, trafficCounts, countingDate, roadType, showRPDI, speed]);
 
   // Recalculate statistics when data is deleted
   const currentStats = useMemo(() => {
@@ -168,6 +180,37 @@ export default function Home() {
     return recalculated;
   }, [noiseData, deletedIndices]);
 
+  // Calculate grouped data for noise calculator
+  const countingGrouped = useMemo<GroupedTrafficSummary | null>(() => {
+    const summary = calculateTrafficSummary(trafficCounts);
+    return calculateGroupedSummary(summary);
+  }, [trafficCounts]);
+
+  const rpdiGrouped = useMemo<GroupedTrafficSummary | null>(() => {
+    if (!showRPDI) return null;
+
+    try {
+      const rpdiResult = calculateRPDI({
+        countingDate: new Date(countingDate),
+        roadType,
+        hourlyCounts: {
+          OA: trafficCounts.map(h => h.OA),
+          LN: trafficCounts.map(h => h.LN),
+          N: trafficCounts.map(h => h.N),
+          A: trafficCounts.map(h => h.A),
+          M: trafficCounts.map(h => h.M),
+          K: trafficCounts.map(h => h.K),
+        },
+      });
+
+      if (!rpdiResult) return null;
+      return calculateTP189GroupedSummary(rpdiResult);
+    } catch (error) {
+      console.error('RPDI calculation error:', error);
+      return null;
+    }
+  }, [trafficCounts, countingDate, roadType, showRPDI]);
+
   const handleDataLoaded = (data: NoiseData) => {
     setNoiseData(data);
     setTimeFilter({ type: 'all' });
@@ -182,6 +225,8 @@ export default function Home() {
     setTrafficCounts(initializeHourlyCounts());
     setCountingDate(new Date().toISOString().split('T')[0]);
     setRoadType('I');
+    setShowRPDI(false);
+    setSpeed(50);
     localStorage.removeItem(STORAGE_KEY);
   };
 
@@ -545,6 +590,11 @@ export default function Home() {
                     onClick={() => setActiveTab('counting')}
                     label="🚗 Sčítání"
                   />
+                  <TabButton
+                    active={activeTab === 'noise'}
+                    onClick={() => setActiveTab('noise')}
+                    label="🔊 Výpočet hluku"
+                  />
                 </nav>
               </div>
 
@@ -569,6 +619,14 @@ export default function Home() {
                     onCountingDateChange={setCountingDate}
                     roadType={roadType}
                     onRoadTypeChange={setRoadType}
+                    showRPDI={showRPDI}
+                    onShowRPDIChange={setShowRPDI}
+                  />
+                )}
+                {activeTab === 'noise' && (
+                  <NoiseCalculator
+                    countingGrouped={countingGrouped}
+                    rpdiGrouped={rpdiGrouped}
                   />
                 )}
               </div>

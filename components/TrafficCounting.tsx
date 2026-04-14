@@ -15,6 +15,8 @@ interface TrafficCountingProps {
   onCountingDateChange?: (date: string) => void;
   roadType?: RoadType;
   onRoadTypeChange?: (roadType: RoadType) => void;
+  showRPDI?: boolean;
+  onShowRPDIChange?: (show: boolean) => void;
   onDataChange?: (data: HourlyTrafficCount[]) => void;
 }
 
@@ -25,18 +27,21 @@ export function TrafficCounting({
   onCountingDateChange,
   roadType: externalRoadType,
   onRoadTypeChange,
+  showRPDI: externalShowRPDI,
+  onShowRPDIChange,
   onDataChange
 }: TrafficCountingProps) {
   // Použij external state pokud je poskytnut, jinak internal state
   const [internalHourlyCounts, setInternalHourlyCounts] = useState<HourlyTrafficCount[]>(initializeHourlyCounts());
   const [internalCountingDate, setInternalCountingDate] = useState<string>(new Date().toISOString().split('T')[0]);
   const [internalRoadType, setInternalRoadType] = useState<RoadType>('I');
-  const [showRPDI, setShowRPDI] = useState(false);
+  const [internalShowRPDI, setInternalShowRPDI] = useState(false);
   const [isDragActive, setIsDragActive] = useState(false);
 
   const hourlyCounts = externalHourlyCounts ?? internalHourlyCounts;
   const countingDate = externalCountingDate ?? internalCountingDate;
   const roadType = externalRoadType ?? internalRoadType;
+  const showRPDI = externalShowRPDI ?? internalShowRPDI;
 
   const setHourlyCounts = (data: HourlyTrafficCount[] | ((prev: HourlyTrafficCount[]) => HourlyTrafficCount[])) => {
     const newData = typeof data === 'function' ? data(hourlyCounts) : data;
@@ -214,7 +219,14 @@ export function TrafficCounting({
             </p>
           </div>
           <button
-            onClick={() => setShowRPDI(!showRPDI)}
+            onClick={() => {
+              const newValue = !showRPDI;
+              if (onShowRPDIChange) {
+                onShowRPDIChange(newValue);
+              } else {
+                setInternalShowRPDI(newValue);
+              }
+            }}
             className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
               showRPDI
                 ? 'bg-green-600 text-white hover:bg-green-700'
