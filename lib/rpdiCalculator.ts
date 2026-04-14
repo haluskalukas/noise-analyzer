@@ -99,12 +99,14 @@ export interface RPDIResult {
  * Mapuje naši kategorii vozidla na kategorii TP 189
  */
 function getTP189Category(vehicleType: VehicleType): string {
-  if (TP189_VEHICLE_MAPPING.category1.includes(vehicleType)) return 'category1';
-  if (TP189_VEHICLE_MAPPING.category2.includes(vehicleType)) return 'category2';
-  if (TP189_VEHICLE_MAPPING.category3.includes(vehicleType)) return 'category3';
+  if (TP189_VEHICLE_MAPPING.O.includes(vehicleType)) return 'O'; // Osobní (OA + LN)
+  if (TP189_VEHICLE_MAPPING.M.includes(vehicleType)) return 'M'; // Motocykly
+  if (TP189_VEHICLE_MAPPING.N.includes(vehicleType)) return 'N'; // Nákladní
+  if (TP189_VEHICLE_MAPPING.A.includes(vehicleType)) return 'A'; // Autobusy
+  if (TP189_VEHICLE_MAPPING.K.includes(vehicleType)) return 'K'; // Nákladní soupravy
 
-  // Fallback pro kola (K) - použijeme category3
-  return 'category3';
+  // Fallback - nemělo by nastat
+  return 'O';
 }
 
 /**
