@@ -7,12 +7,12 @@ import { GroupedTrafficSummary } from '@/types/traffic';
 interface NoiseCalculatorProps {
   countingGrouped: GroupedTrafficSummary | null;
   rpdiGrouped: GroupedTrafficSummary | null;
+  measuredDayAvg: number; // naměřený průměr den ze statistik
+  measuredNightAvg: number; // naměřený průměr noc ze statistik
 }
 
-export default function NoiseCalculator({ countingGrouped, rpdiGrouped }: NoiseCalculatorProps) {
+export default function NoiseCalculator({ countingGrouped, rpdiGrouped, measuredDayAvg, measuredNightAvg }: NoiseCalculatorProps) {
   const [speed, setSpeed] = useState<number>(50);
-  const [measuredDay, setMeasuredDay] = useState<number>(0);
-  const [measuredNight, setMeasuredNight] = useState<number>(0);
 
   // Výpočet hluku ze sčítání
   const countingNoiseDay = countingGrouped
@@ -64,9 +64,9 @@ export default function NoiseCalculator({ countingGrouped, rpdiGrouped }: NoiseC
       : null;
 
   // Výsledné hodnoty (naměřená + rozdíl)
-  const finalDay = measuredDay && differenceDay !== null ? Math.round((measuredDay + differenceDay) * 10) / 10 : null;
+  const finalDay = measuredDayAvg > 0 && differenceDay !== null ? Math.round((measuredDayAvg + differenceDay) * 10) / 10 : null;
   const finalNight =
-    measuredNight && differenceNight !== null ? Math.round((measuredNight + differenceNight) * 10) / 10 : null;
+    measuredNightAvg > 0 && differenceNight !== null ? Math.round((measuredNightAvg + differenceNight) * 10) / 10 : null;
 
   return (
     <div className="space-y-6">
@@ -97,23 +97,23 @@ export default function NoiseCalculator({ countingGrouped, rpdiGrouped }: NoiseC
             <label className="block text-sm font-medium text-gray-700 mb-1">Naměřený hluk den [dB(A)]</label>
             <input
               type="number"
-              value={measuredDay || ''}
-              onChange={(e) => setMeasuredDay(Number(e.target.value))}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-              step="0.1"
-              placeholder="0.0"
+              value={measuredDayAvg > 0 ? measuredDayAvg.toFixed(1) : ''}
+              readOnly
+              className="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-50 text-gray-700 cursor-not-allowed"
+              placeholder="Ze statistik"
             />
+            <p className="text-xs text-gray-500 mt-1">Automaticky ze záložky Statistiky</p>
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Naměřený hluk noc [dB(A)]</label>
             <input
               type="number"
-              value={measuredNight || ''}
-              onChange={(e) => setMeasuredNight(Number(e.target.value))}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-              step="0.1"
-              placeholder="0.0"
+              value={measuredNightAvg > 0 ? measuredNightAvg.toFixed(1) : ''}
+              readOnly
+              className="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-50 text-gray-700 cursor-not-allowed"
+              placeholder="Ze statistik"
             />
+            <p className="text-xs text-gray-500 mt-1">Automaticky ze záložky Statistiky</p>
           </div>
         </div>
         <p className="text-sm text-gray-500 mt-3">
@@ -153,7 +153,7 @@ export default function NoiseCalculator({ countingGrouped, rpdiGrouped }: NoiseC
                 <tr className="hover:bg-gray-50">
                   <td className="px-6 py-4 whitespace-nowrap font-medium text-gray-900">Den (6-22h)</td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    {measuredDay > 0 ? measuredDay.toFixed(1) : '—'}
+                    {measuredDayAvg > 0 ? measuredDayAvg.toFixed(1) : '—'}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     {countingNoiseDay ? countingNoiseDay.LAeq.toFixed(1) : '—'}
@@ -178,7 +178,7 @@ export default function NoiseCalculator({ countingGrouped, rpdiGrouped }: NoiseC
                 <tr className="hover:bg-gray-50">
                   <td className="px-6 py-4 whitespace-nowrap font-medium text-gray-900">Noc (22-6h)</td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    {measuredNight > 0 ? measuredNight.toFixed(1) : '—'}
+                    {measuredNightAvg > 0 ? measuredNightAvg.toFixed(1) : '—'}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     {countingNoiseNight ? countingNoiseNight.LAeq.toFixed(1) : '—'}
@@ -223,8 +223,8 @@ export default function NoiseCalculator({ countingGrouped, rpdiGrouped }: NoiseC
             10·log₁₀(d) - 8
           </p>
           <p>
-            <strong>Emisní hladiny (50 km/h):</strong> Kategorie 1 (OA+LN+M) = 63 dB(A), Kategorie 2 (N+A) = 74 dB(A),
-            Kategorie 3 (K) = 78 dB(A)
+            <strong>Emisní hladiny (50 km/h):</strong> Kategorie 1 (OA+LN+M) = 65 dB(A), Kategorie 2 (N+A) = 71 dB(A),
+            Kategorie 3 (K) = 72 dB(A)
           </p>
           <p>
             <strong>Korekce rychlosti:</strong> Lw = L₀ + 30·log₁₀(v/50)

@@ -627,6 +627,8 @@ export default function Home() {
                   <NoiseCalculator
                     countingGrouped={countingGrouped}
                     rpdiGrouped={rpdiGrouped}
+                    measuredDayAvg={currentStats?.dayAvg || 0}
+                    measuredNightAvg={currentStats?.nightAvg || 0}
                   />
                 )}
               </div>

@@ -23,11 +23,16 @@ export interface NoiseCalculationResult {
 /**
  * Emisní hladiny akustického výkonu pro jednotlivé kategorie
  * při referenční rychlosti 50 km/h
+ *
+ * Hodnoty založené na měření CNOSSOS-EU a literatuře:
+ * - Lehká vozidla: 60-67 dB(A) ve vzdálenosti 10m
+ * - Těžká vozidla: 70-75 dB(A) ve vzdálenosti 10m
+ * - Rozdíl kategorie 1→2: ~10 dB, kategorie 2→3: ~1 dB
  */
 const EMISSION_LEVELS = {
-  category1: 63, // OA + LN + M [dB(A)]
-  category2: 74, // N + A [dB(A)]
-  category3: 78, // K [dB(A)]
+  category1: 65, // OA + LN + M [dB(A)]
+  category2: 71, // N + A [dB(A)]
+  category3: 72, // K [dB(A)]
 };
 
 /**
