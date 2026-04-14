@@ -9,7 +9,7 @@ export interface HourlyTrafficCount {
   N: number;   // Nákladní
   A: number;   // Autobusy
   M: number;   // Motorky
-  K: number;   // Kamiony
+  K: number;   // Kamiony (těžká nákladní)
 }
 
 export interface TrafficSummary {

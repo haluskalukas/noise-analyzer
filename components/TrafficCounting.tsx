@@ -65,7 +65,6 @@ export function TrafficCounting({
 
   const summary = useMemo(() => calculateTrafficSummary(hourlyCounts), [hourlyCounts]);
   const grouped = useMemo(() => calculateGroupedSummary(summary), [summary]);
-  const tp189Grouped = useMemo(() => calculateTP189GroupedSummary(summary), [summary]);
 
   // Výpočet RPDI
   const rpdiResult = useMemo<RPDIResult | null>(() => {
@@ -97,6 +96,8 @@ export function TrafficCounting({
       return null;
     }
   }, [hourlyCounts, countingDate, roadType, showRPDI]);
+
+  const tp189Grouped = useMemo(() => calculateTP189GroupedSummary(rpdiResult), [rpdiResult]);
 
   const handleCellChange = (hour: number, category: keyof Omit<HourlyTrafficCount, 'hour'>, value: string) => {
     const numValue = parseInt(value) || 0;
@@ -654,45 +655,41 @@ export function TrafficCounting({
       </div>
 
       {/* TP 189 Grouped Summary Table */}
-      <div className="bg-white rounded-lg shadow-sm border border-green-300 overflow-hidden">
-        <div className="px-6 py-4 bg-green-50 border-b border-green-200">
-          <h3 className="text-lg font-semibold text-green-900">Seskupené kategorie dle TP 189 (nově vypočtené)</h3>
-          <p className="text-xs text-green-700 mt-1">
-            O: Osobní (OA+LN) • M: Motocykly • N: Nákladní • A: Autobusy • K: Kamiony
-          </p>
+      {showRPDI && rpdiResult && (
+        <div className="bg-white rounded-lg shadow-sm border border-green-300 overflow-hidden">
+          <div className="px-6 py-4 bg-green-50 border-b border-green-200">
+            <h3 className="text-lg font-semibold text-green-900">Seskupené kategorie dle TP 189 (nově vypočtené)</h3>
+            <p className="text-xs text-green-700 mt-1">
+              Kategorie 1: OA + LN + M • Kategorie 2: A + N • Kategorie 3: K (z RPDI hodnot)
+            </p>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-gray-200">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">
+                    Období
+                  </th>
+                  <th className="px-6 py-3 text-center text-xs font-medium text-gray-700 uppercase tracking-wider">
+                    Kategorie 1<br/><span className="text-xs font-normal">(OA+LN+M)</span>
+                  </th>
+                  <th className="px-6 py-3 text-center text-xs font-medium text-gray-700 uppercase tracking-wider">
+                    Kategorie 2<br/><span className="text-xs font-normal">(A+N)</span>
+                  </th>
+                  <th className="px-6 py-3 text-center text-xs font-medium text-gray-700 uppercase tracking-wider">
+                    Kategorie 3<br/><span className="text-xs font-normal">(K)</span>
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                <GroupedRow label="Den (6:00-22:00)" counts={tp189Grouped.day} bgColor="bg-yellow-50" />
+                <GroupedRow label="Noc (22:00-6:00)" counts={tp189Grouped.night} bgColor="bg-blue-50" />
+                <GroupedRow label="Celkem 24h" counts={tp189Grouped.total} bgColor="bg-green-50" />
+              </tbody>
+            </table>
+          </div>
         </div>
-        <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">
-                  Období
-                </th>
-                <th className="px-6 py-3 text-center text-xs font-medium text-gray-700 uppercase tracking-wider">
-                  O<br/><span className="text-xs font-normal">(OA+LN)</span>
-                </th>
-                <th className="px-6 py-3 text-center text-xs font-medium text-gray-700 uppercase tracking-wider">
-                  M<br/><span className="text-xs font-normal">(Motocykly)</span>
-                </th>
-                <th className="px-6 py-3 text-center text-xs font-medium text-gray-700 uppercase tracking-wider">
-                  N<br/><span className="text-xs font-normal">(Nákladní)</span>
-                </th>
-                <th className="px-6 py-3 text-center text-xs font-medium text-gray-700 uppercase tracking-wider">
-                  A<br/><span className="text-xs font-normal">(Autobusy)</span>
-                </th>
-                <th className="px-6 py-3 text-center text-xs font-medium text-gray-700 uppercase tracking-wider">
-                  K<br/><span className="text-xs font-normal">(Kamiony)</span>
-                </th>
-              </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
-              <TP189GroupedRow label="Den (6:00-22:00)" counts={tp189Grouped.day} bgColor="bg-yellow-50" />
-              <TP189GroupedRow label="Noc (22:00-6:00)" counts={tp189Grouped.night} bgColor="bg-blue-50" />
-              <TP189GroupedRow label="Celkem 24h" counts={tp189Grouped.total} bgColor="bg-green-50" />
-            </tbody>
-          </table>
-        </div>
-      </div>
+      )}
     </div>
   );
 }
@@ -777,31 +774,6 @@ function GroupedRow({ label, counts, bgColor }: { label: string; counts: any; bg
       </td>
       <td className="px-6 py-4 whitespace-nowrap text-sm text-center text-gray-900">
         {formatNumber(counts.category3, 0)}
-      </td>
-    </tr>
-  );
-}
-
-function TP189GroupedRow({ label, counts, bgColor }: { label: string; counts: any; bgColor: string }) {
-  return (
-    <tr className={bgColor}>
-      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-        {label}
-      </td>
-      <td className="px-6 py-4 whitespace-nowrap text-sm text-center text-gray-900">
-        {formatNumber(counts.O, 0)}
-      </td>
-      <td className="px-6 py-4 whitespace-nowrap text-sm text-center text-gray-900">
-        {formatNumber(counts.M, 0)}
-      </td>
-      <td className="px-6 py-4 whitespace-nowrap text-sm text-center text-gray-900">
-        {formatNumber(counts.N, 0)}
-      </td>
-      <td className="px-6 py-4 whitespace-nowrap text-sm text-center text-gray-900">
-        {formatNumber(counts.A, 0)}
-      </td>
-      <td className="px-6 py-4 whitespace-nowrap text-sm text-center text-gray-900">
-        {formatNumber(counts.K, 0)}
       </td>
     </tr>
   );
