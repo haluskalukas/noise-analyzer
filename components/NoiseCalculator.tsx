@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { calculateNoise, calculateNoiseDifference } from '@/lib/noiseCalculator';
 import { GroupedTrafficSummary } from '@/types/traffic';
+import { formatNumber } from '@/lib/format';
 
 interface NoiseCalculatorProps {
   countingGrouped: GroupedTrafficSummary | null;
@@ -77,6 +78,80 @@ export default function NoiseCalculator({ countingGrouped, rpdiGrouped, measured
           Porovnání hladiny hluku ze sčítání dopravy vs. RPDI dle TP 189, vzdálenost 7,5 m od osy silnice
         </p>
       </div>
+
+      {/* Vstupní data - Seskupené kategorie ze sčítání */}
+      {countingGrouped && (
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+          <div className="px-6 py-4 bg-gray-50 border-b border-gray-200">
+            <h3 className="text-lg font-semibold text-gray-900">Seskupené kategorie ze sčítání</h3>
+            <p className="text-xs text-gray-600 mt-1">
+              Kategorie 1: OA + LN + M • Kategorie 2: A + N • Kategorie 3: K
+            </p>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-gray-200">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">
+                    Období
+                  </th>
+                  <th className="px-6 py-3 text-center text-xs font-medium text-gray-700 uppercase tracking-wider">
+                    Kategorie 1<br/><span className="text-xs font-normal">(OA+LN+M)</span>
+                  </th>
+                  <th className="px-6 py-3 text-center text-xs font-medium text-gray-700 uppercase tracking-wider">
+                    Kategorie 2<br/><span className="text-xs font-normal">(A+N)</span>
+                  </th>
+                  <th className="px-6 py-3 text-center text-xs font-medium text-gray-700 uppercase tracking-wider">
+                    Kategorie 3<br/><span className="text-xs font-normal">(K)</span>
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                <GroupedRow label="Den (6:00-22:00)" counts={countingGrouped.day} bgColor="bg-yellow-50" />
+                <GroupedRow label="Noc (22:00-6:00)" counts={countingGrouped.night} bgColor="bg-blue-50" />
+                <GroupedRow label="Celkem 24h" counts={countingGrouped.total} bgColor="bg-green-50" />
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {/* Vstupní data - Seskupené kategorie dle TP 189 (RPDI) */}
+      {rpdiGrouped && (
+        <div className="bg-white rounded-lg shadow-sm border border-green-300 overflow-hidden">
+          <div className="px-6 py-4 bg-green-50 border-b border-green-200">
+            <h3 className="text-lg font-semibold text-green-900">Seskupené kategorie dle TP 189 (RPDI)</h3>
+            <p className="text-xs text-green-700 mt-1">
+              Kategorie 1: OA + LN + M • Kategorie 2: A + N • Kategorie 3: K (z RPDI hodnot)
+            </p>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-gray-200">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">
+                    Období
+                  </th>
+                  <th className="px-6 py-3 text-center text-xs font-medium text-gray-700 uppercase tracking-wider">
+                    Kategorie 1<br/><span className="text-xs font-normal">(OA+LN+M)</span>
+                  </th>
+                  <th className="px-6 py-3 text-center text-xs font-medium text-gray-700 uppercase tracking-wider">
+                    Kategorie 2<br/><span className="text-xs font-normal">(A+N)</span>
+                  </th>
+                  <th className="px-6 py-3 text-center text-xs font-medium text-gray-700 uppercase tracking-wider">
+                    Kategorie 3<br/><span className="text-xs font-normal">(K)</span>
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                <GroupedRow label="Den (6:00-22:00)" counts={rpdiGrouped.day} bgColor="bg-yellow-50" />
+                <GroupedRow label="Noc (22:00-6:00)" counts={rpdiGrouped.night} bgColor="bg-blue-50" />
+                <GroupedRow label="Celkem 24h" counts={rpdiGrouped.total} bgColor="bg-green-50" />
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
 
       {/* Parametry */}
       <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
@@ -235,5 +310,25 @@ export default function NoiseCalculator({ countingGrouped, rpdiGrouped, measured
         </div>
       </div>
     </div>
+  );
+}
+
+// Helper komponenta pro zobrazení řádku seskupených kategorií
+function GroupedRow({ label, counts, bgColor }: { label: string; counts: any; bgColor: string }) {
+  return (
+    <tr className={bgColor}>
+      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+        {label}
+      </td>
+      <td className="px-6 py-4 whitespace-nowrap text-sm text-center text-gray-900">
+        {formatNumber(counts.category1, 0)}
+      </td>
+      <td className="px-6 py-4 whitespace-nowrap text-sm text-center text-gray-900">
+        {formatNumber(counts.category2, 0)}
+      </td>
+      <td className="px-6 py-4 whitespace-nowrap text-sm text-center text-gray-900">
+        {formatNumber(counts.category3, 0)}
+      </td>
+    </tr>
   );
 }
