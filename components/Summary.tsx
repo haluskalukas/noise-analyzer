@@ -7,6 +7,19 @@ interface SummaryProps {
   measuredNightAvg: number; // naměřený průměr noc ze statistik
   rpdiCorrectionDay: number; // korekce na RPDI den (rozdíl z kalkulátoru)
   rpdiCorrectionNight: number; // korekce na RPDI noc (rozdíl z kalkulátoru)
+  address?: string;
+  onAddressChange?: (address: string) => void;
+  facadeReflection?: boolean;
+  onFacadeReflectionChange?: (value: boolean) => void;
+  uncertainty?: number;
+  onUncertaintyChange?: (value: number) => void;
+  roadBefore2001?: boolean;
+  onRoadBefore2001Change?: (value: boolean) => void;
+}
+
+// Helper funkce pro formátování čísel s českou desetinnou čárkou
+function formatCzechNumber(num: number, decimals: number = 1): string {
+  return num.toFixed(decimals).replace('.', ',');
 }
 
 export default function Summary({
@@ -14,12 +27,57 @@ export default function Summary({
   measuredNightAvg,
   rpdiCorrectionDay,
   rpdiCorrectionNight,
+  address: externalAddress,
+  onAddressChange,
+  facadeReflection: externalFacadeReflection,
+  onFacadeReflectionChange,
+  uncertainty: externalUncertainty,
+  onUncertaintyChange,
+  roadBefore2001: externalRoadBefore2001,
+  onRoadBefore2001Change,
 }: SummaryProps) {
-  const [address, setAddress] = useState<string>('');
-  const [measurementLocation, setMeasurementLocation] = useState<string>('');
-  const [facadeReflection, setFacadeReflection] = useState<boolean>(false);
-  const [uncertainty, setUncertainty] = useState<number>(1.8);
-  const [roadBefore2001, setRoadBefore2001] = useState<boolean>(false);
+  // Použij external state pokud je poskytnut, jinak internal state
+  const [internalAddress, setInternalAddress] = useState<string>('');
+  const [internalFacadeReflection, setInternalFacadeReflection] = useState<boolean>(false);
+  const [internalUncertainty, setInternalUncertainty] = useState<number>(1.8);
+  const [internalRoadBefore2001, setInternalRoadBefore2001] = useState<boolean>(false);
+
+  const address = externalAddress ?? internalAddress;
+  const facadeReflection = externalFacadeReflection ?? internalFacadeReflection;
+  const uncertainty = externalUncertainty ?? internalUncertainty;
+  const roadBefore2001 = externalRoadBefore2001 ?? internalRoadBefore2001;
+
+  const setAddress = (value: string) => {
+    if (onAddressChange) {
+      onAddressChange(value);
+    } else {
+      setInternalAddress(value);
+    }
+  };
+
+  const setFacadeReflection = (value: boolean) => {
+    if (onFacadeReflectionChange) {
+      onFacadeReflectionChange(value);
+    } else {
+      setInternalFacadeReflection(value);
+    }
+  };
+
+  const setUncertainty = (value: number) => {
+    if (onUncertaintyChange) {
+      onUncertaintyChange(value);
+    } else {
+      setInternalUncertainty(value);
+    }
+  };
+
+  const setRoadBefore2001 = (value: boolean) => {
+    if (onRoadBefore2001Change) {
+      onRoadBefore2001Change(value);
+    } else {
+      setInternalRoadBefore2001(value);
+    }
+  };
 
   // Korekce na odraz
   const reflectionCorrection = facadeReflection ? -2 : 0;
@@ -66,18 +124,6 @@ export default function Summary({
               onChange={(e) => setAddress(e.target.value)}
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               placeholder="Např. Hlavní 123, Praha"
-            />
-          </div>
-
-          {/* Místo měření */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Místo měření</label>
-            <input
-              type="text"
-              value={measurementLocation}
-              onChange={(e) => setMeasurementLocation(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-              placeholder="Např. Fasáda domu, 1. patro"
             />
           </div>
 
@@ -168,7 +214,7 @@ export default function Summary({
             <thead className="bg-gray-50">
               <tr>
                 <th className="px-4 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">
-                  Místo měření
+                  Adresa
                 </th>
                 <th className="px-4 py-3 text-center text-xs font-medium text-gray-700 uppercase tracking-wider">
                   Naměřená hodnota den [dB(A)]
@@ -200,41 +246,35 @@ export default function Summary({
                 <th className="px-4 py-3 text-center text-xs font-medium text-gray-700 uppercase tracking-wider">
                   Limit noc [dB(A)]
                 </th>
-                <th className="px-4 py-3 text-center text-xs font-medium text-gray-700 uppercase tracking-wider bg-yellow-50">
-                  Hodnocení den
-                </th>
-                <th className="px-4 py-3 text-center text-xs font-medium text-gray-700 uppercase tracking-wider bg-yellow-50">
-                  Hodnocení noc
-                </th>
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
-              <tr className="hover:bg-gray-50">
-                {/* Místo měření */}
+              <tr>
+                {/* Adresa */}
                 <td className="px-4 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                  {measurementLocation || '—'}
+                  {address || '—'}
                 </td>
 
                 {/* Naměřená den */}
                 <td className="px-4 py-4 whitespace-nowrap text-sm text-center text-gray-900">
-                  {measuredDayAvg > 0 ? measuredDayAvg.toFixed(1) : '—'}
+                  {measuredDayAvg > 0 ? formatCzechNumber(measuredDayAvg) : '—'}
                 </td>
 
                 {/* Naměřená noc */}
                 <td className="px-4 py-4 whitespace-nowrap text-sm text-center text-gray-900">
-                  {measuredNightAvg > 0 ? measuredNightAvg.toFixed(1) : '—'}
+                  {measuredNightAvg > 0 ? formatCzechNumber(measuredNightAvg) : '—'}
                 </td>
 
                 {/* Korekce odraz */}
                 <td className="px-4 py-4 whitespace-nowrap text-sm text-center text-gray-900">
-                  {reflectionCorrection.toFixed(1)}
+                  {formatCzechNumber(reflectionCorrection)}
                 </td>
 
                 {/* Korekce RPDI den */}
                 <td className="px-4 py-4 whitespace-nowrap text-sm text-center">
                   <span className={rpdiCorrectionDay > 0 ? 'text-red-600 font-semibold' : 'text-green-600 font-semibold'}>
                     {rpdiCorrectionDay > 0 ? '+' : ''}
-                    {rpdiCorrectionDay.toFixed(1)}
+                    {formatCzechNumber(rpdiCorrectionDay)}
                   </span>
                 </td>
 
@@ -242,55 +282,33 @@ export default function Summary({
                 <td className="px-4 py-4 whitespace-nowrap text-sm text-center">
                   <span className={rpdiCorrectionNight > 0 ? 'text-red-600 font-semibold' : 'text-green-600 font-semibold'}>
                     {rpdiCorrectionNight > 0 ? '+' : ''}
-                    {rpdiCorrectionNight.toFixed(1)}
+                    {formatCzechNumber(rpdiCorrectionNight)}
                   </span>
                 </td>
 
                 {/* Nejistota */}
                 <td className="px-4 py-4 whitespace-nowrap text-sm text-center text-gray-900">
-                  {uncertainty.toFixed(1)}
+                  {formatCzechNumber(uncertainty)}
                 </td>
 
                 {/* Výsledná den */}
-                <td className="px-4 py-4 whitespace-nowrap text-sm text-center font-bold text-blue-900 bg-blue-50">
-                  {finalDay !== null ? finalDay.toFixed(1) : '—'}
+                <td className={`px-4 py-4 whitespace-nowrap text-sm text-center font-bold ${exceedsLimitDay ? 'bg-red-100 text-red-900' : 'bg-green-100 text-green-900'}`}>
+                  {finalDay !== null ? formatCzechNumber(finalDay) : '—'}
                 </td>
 
                 {/* Výsledná noc */}
-                <td className="px-4 py-4 whitespace-nowrap text-sm text-center font-bold text-blue-900 bg-blue-50">
-                  {finalNight !== null ? finalNight.toFixed(1) : '—'}
+                <td className={`px-4 py-4 whitespace-nowrap text-sm text-center font-bold ${exceedsLimitNight ? 'bg-red-100 text-red-900' : 'bg-green-100 text-green-900'}`}>
+                  {finalNight !== null ? formatCzechNumber(finalNight) : '—'}
                 </td>
 
                 {/* Limit den */}
                 <td className="px-4 py-4 whitespace-nowrap text-sm text-center font-semibold text-gray-900">
-                  {limitDay}
+                  {formatCzechNumber(limitDay)}
                 </td>
 
                 {/* Limit noc */}
                 <td className="px-4 py-4 whitespace-nowrap text-sm text-center font-semibold text-gray-900">
-                  {limitNight}
-                </td>
-
-                {/* Hodnocení den */}
-                <td className="px-4 py-4 whitespace-nowrap text-sm text-center font-bold bg-yellow-50">
-                  {finalDay !== null ? (
-                    <span className={exceedsLimitDay ? 'text-red-600' : 'text-green-600'}>
-                      Hygienický limit {exceedsLimitDay ? 'JE' : 'NENÍ'} prokazatelně překročen
-                    </span>
-                  ) : (
-                    '—'
-                  )}
-                </td>
-
-                {/* Hodnocení noc */}
-                <td className="px-4 py-4 whitespace-nowrap text-sm text-center font-bold bg-yellow-50">
-                  {finalNight !== null ? (
-                    <span className={exceedsLimitNight ? 'text-red-600' : 'text-green-600'}>
-                      Hygienický limit {exceedsLimitNight ? 'JE' : 'NENÍ'} prokazatelně překročen
-                    </span>
-                  ) : (
-                    '—'
-                  )}
+                  {formatCzechNumber(limitNight)}
                 </td>
               </tr>
             </tbody>

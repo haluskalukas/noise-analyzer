@@ -86,6 +86,12 @@ export default function Home() {
   const [showRPDI, setShowRPDI] = useState(false);
   const [speed, setSpeed] = useState<number>(50);
 
+  // Summary state (zachováváno mezi kartami)
+  const [summaryAddress, setSummaryAddress] = useState<string>('');
+  const [summaryFacadeReflection, setSummaryFacadeReflection] = useState<boolean>(false);
+  const [summaryUncertainty, setSummaryUncertainty] = useState<number>(1.8);
+  const [summaryRoadBefore2001, setSummaryRoadBefore2001] = useState<boolean>(false);
+
   // Load from localStorage on mount
   useEffect(() => {
     try {
@@ -130,6 +136,18 @@ export default function Home() {
         if (parsed.speed) {
           setSpeed(parsed.speed);
         }
+        if (parsed.summaryAddress) {
+          setSummaryAddress(parsed.summaryAddress);
+        }
+        if (parsed.summaryFacadeReflection !== undefined) {
+          setSummaryFacadeReflection(parsed.summaryFacadeReflection);
+        }
+        if (parsed.summaryUncertainty) {
+          setSummaryUncertainty(parsed.summaryUncertainty);
+        }
+        if (parsed.summaryRoadBefore2001 !== undefined) {
+          setSummaryRoadBefore2001(parsed.summaryRoadBefore2001);
+        }
       }
     } catch (error) {
       console.error('Error loading saved state:', error);
@@ -150,6 +168,10 @@ export default function Home() {
           roadType,
           showRPDI,
           speed,
+          summaryAddress,
+          summaryFacadeReflection,
+          summaryUncertainty,
+          summaryRoadBefore2001,
           timestamp: new Date().toISOString(),
         };
         localStorage.setItem(STORAGE_KEY, JSON.stringify(toSave));
@@ -157,7 +179,7 @@ export default function Home() {
         console.error('Error saving state:', error);
       }
     }
-  }, [noiseData, deletedIndices, timeFilter, activeTab, trafficCounts, countingDate, roadType, showRPDI, speed]);
+  }, [noiseData, deletedIndices, timeFilter, activeTab, trafficCounts, countingDate, roadType, showRPDI, speed, summaryAddress, summaryFacadeReflection, summaryUncertainty, summaryRoadBefore2001]);
 
   // Recalculate statistics when data is deleted
   const currentStats = useMemo(() => {
@@ -272,6 +294,10 @@ export default function Home() {
     setRoadType('I');
     setShowRPDI(false);
     setSpeed(50);
+    setSummaryAddress('');
+    setSummaryFacadeReflection(false);
+    setSummaryUncertainty(1.8);
+    setSummaryRoadBefore2001(false);
     localStorage.removeItem(STORAGE_KEY);
   };
 
@@ -687,6 +713,14 @@ export default function Home() {
                     measuredNightAvg={currentStats?.nightAvg || 0}
                     rpdiCorrectionDay={rpdiCorrections.day}
                     rpdiCorrectionNight={rpdiCorrections.night}
+                    address={summaryAddress}
+                    onAddressChange={setSummaryAddress}
+                    facadeReflection={summaryFacadeReflection}
+                    onFacadeReflectionChange={setSummaryFacadeReflection}
+                    uncertainty={summaryUncertainty}
+                    onUncertaintyChange={setSummaryUncertainty}
+                    roadBefore2001={summaryRoadBefore2001}
+                    onRoadBefore2001Change={setSummaryRoadBefore2001}
                   />
                 )}
               </div>
