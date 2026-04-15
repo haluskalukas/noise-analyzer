@@ -468,10 +468,10 @@ export default function Summary({
 
     // ===== LIST 5: POČASÍ =====
     if (weatherData && weatherData.length > 0) {
-      // Pomocná funkce pro směr větru
+      // Pomocná funkce pro směr větru (pouze 8 hlavních směrů)
       const getWindDirection = (degrees: number): string => {
-        const directions = ['S', 'SSV', 'SV', 'VSV', 'V', 'VJV', 'JV', 'JJV', 'J', 'JJZ', 'JZ', 'ZJZ', 'Z', 'ZSZ', 'SZ', 'SSZ'];
-        const index = Math.round(degrees / 22.5) % 16;
+        const directions = ['S', 'SV', 'V', 'JV', 'J', 'JZ', 'Z', 'SZ'];
+        const index = Math.round(degrees / 45) % 8;
         return directions[index];
       };
 
@@ -481,7 +481,10 @@ export default function Summary({
         ['Čas', 'Teplota [°C]', 'Vlhkost [%]', 'Tlak [hPa]', 'Rychlost větru [km/h]', 'Směr větru'],
       ];
 
-      weatherData.forEach((data) => {
+      // Přeuspořádané hodiny počasí podle startHour
+      const reorderedWeather = reorderHours(weatherData, startHour);
+
+      reorderedWeather.forEach((data) => {
         const currentHour = data.hour.toString().padStart(2, '0');
         const nextHour = ((data.hour + 1) % 24).toString().padStart(2, '0');
         const displayHour = `${currentHour}:00 - ${nextHour}:00`;
@@ -491,7 +494,7 @@ export default function Summary({
           data.humidity.toString(),
           formatCzechNumber(data.pressure),
           formatCzechNumber(data.windSpeed),
-          `${data.windDirection}° (${getWindDirection(data.windDirection)})`,
+          getWindDirection(data.windDirection),
         ]);
       });
 

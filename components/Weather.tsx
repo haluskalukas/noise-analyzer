@@ -12,25 +12,23 @@ export interface WeatherData {
 }
 
 interface WeatherProps {
-  address?: string;
-  countingDate?: string;
   weatherData?: WeatherData[];
   onWeatherDataChange?: (data: WeatherData[]) => void;
 }
 
 export default function Weather({
-  address = '',
-  countingDate = '',
   weatherData = [],
   onWeatherDataChange,
 }: WeatherProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [address, setAddress] = useState<string>('');
+  const [countingDate, setCountingDate] = useState<string>(new Date().toISOString().split('T')[0]);
 
-  // Pomocná funkce pro převod směru větru na světovou stranu
+  // Pomocná funkce pro převod směru větru na světovou stranu (pouze 8 hlavních směrů)
   const getWindDirection = (degrees: number): string => {
-    const directions = ['S', 'SSV', 'SV', 'VSV', 'V', 'VJV', 'JV', 'JJV', 'J', 'JJZ', 'JZ', 'ZJZ', 'Z', 'ZSZ', 'SZ', 'SSZ'];
-    const index = Math.round(degrees / 22.5) % 16;
+    const directions = ['S', 'SV', 'V', 'JV', 'J', 'JZ', 'Z', 'SZ'];
+    const index = Math.round(degrees / 45) % 8;
     return directions[index];
   };
 
@@ -122,14 +120,31 @@ export default function Weather({
       <div className="bg-white rounded-lg shadow-md p-6">
         <h2 className="text-2xl font-bold text-gray-900 mb-4">Meteorologické podmínky</h2>
 
-        {/* Informace o datech */}
-        <div className="mb-4 p-4 bg-blue-50 rounded-lg">
-          <p className="text-sm text-gray-700">
-            <strong>Adresa:</strong> {address || 'Není zadána'}
-          </p>
-          <p className="text-sm text-gray-700">
-            <strong>Datum sčítání:</strong> {countingDate ? new Date(countingDate).toLocaleDateString('cs-CZ') : 'Není zadáno'}
-          </p>
+        {/* Vstupní pole pro adresu a datum */}
+        <div className="mb-4 space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Adresa místa
+            </label>
+            <input
+              type="text"
+              value={address}
+              onChange={(e) => setAddress(e.target.value)}
+              placeholder="Zadej adresu nebo název místa"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Datum měření
+            </label>
+            <input
+              type="date"
+              value={countingDate}
+              onChange={(e) => setCountingDate(e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
         </div>
 
         {/* Tlačítko pro načtení */}
@@ -196,7 +211,7 @@ export default function Weather({
                         {data.windSpeed.toFixed(1).replace('.', ',')}
                       </td>
                       <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
-                        {data.windDirection}° ({getWindDirection(data.windDirection)})
+                        {getWindDirection(data.windDirection)}
                       </td>
                     </tr>
                   );

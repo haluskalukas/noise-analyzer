@@ -724,14 +724,14 @@ export default function Home() {
                     label="🔊 Výpočet hluku"
                   />
                   <TabButton
-                    active={activeTab === 'summary'}
-                    onClick={() => setActiveTab('summary')}
-                    label="📋 Souhrn"
-                  />
-                  <TabButton
                     active={activeTab === 'weather'}
                     onClick={() => setActiveTab('weather')}
                     label="🌤️ Počasí"
+                  />
+                  <TabButton
+                    active={activeTab === 'summary'}
+                    onClick={() => setActiveTab('summary')}
+                    label="📋 Souhrn"
                   />
                 </nav>
               </div>
@@ -793,8 +793,6 @@ export default function Home() {
                 )}
                 {activeTab === 'weather' && (
                   <Weather
-                    address={summaryAddress}
-                    countingDate={countingDate}
                     weatherData={weatherData}
                     onWeatherDataChange={setWeatherData}
                   />
