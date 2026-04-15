@@ -1,6 +1,9 @@
 'use client';
 
 import { useState } from 'react';
+import * as XLSX from 'xlsx';
+import { NoiseStats } from '@/types';
+import { HourlyTrafficCount, GroupedTrafficSummary } from '@/types/traffic';
 
 interface SummaryProps {
   measuredDayAvg: number; // naměřený průměr den ze statistik
@@ -15,6 +18,12 @@ interface SummaryProps {
   onUncertaintyChange?: (value: number) => void;
   roadBefore2001?: boolean;
   onRoadBefore2001Change?: (value: boolean) => void;
+  // Data pro Excel export
+  stats?: NoiseStats | null;
+  trafficCounts?: HourlyTrafficCount[];
+  countingGrouped?: GroupedTrafficSummary | null;
+  rpdiGrouped?: GroupedTrafficSummary | null;
+  speed?: number;
 }
 
 // Helper funkce pro formátování čísel s českou desetinnou čárkou
@@ -35,12 +44,18 @@ export default function Summary({
   onUncertaintyChange,
   roadBefore2001: externalRoadBefore2001,
   onRoadBefore2001Change,
+  stats,
+  trafficCounts,
+  countingGrouped,
+  rpdiGrouped,
+  speed,
 }: SummaryProps) {
   // Použij external state pokud je poskytnut, jinak internal state
   const [internalAddress, setInternalAddress] = useState<string>('');
   const [internalFacadeReflection, setInternalFacadeReflection] = useState<boolean>(false);
   const [internalUncertainty, setInternalUncertainty] = useState<number>(1.8);
   const [internalRoadBefore2001, setInternalRoadBefore2001] = useState<boolean>(false);
+  const [startHour, setStartHour] = useState<number>(0);
 
   const address = externalAddress ?? internalAddress;
   const facadeReflection = externalFacadeReflection ?? internalFacadeReflection;
@@ -101,6 +116,34 @@ export default function Summary({
   // Vyhodnocení limitu
   const exceedsLimitDay = finalDay !== null && finalDay > limitDay;
   const exceedsLimitNight = finalNight !== null && finalNight > limitNight;
+
+  // Helper funkce pro přeuspořádání hodin od startHour
+  const reorderHours = (data: any[], startHour: number) => {
+    const reordered = [];
+    for (let i = 0; i < 24; i++) {
+      const hour = (startHour + i) % 24;
+      reordered.push(data[hour]);
+    }
+    return reordered;
+  };
+
+  // Export do Excelu
+  const handleExcelExport = () => {
+    if (!stats || !trafficCounts || !countingGrouped) {
+      alert('Není k dispozici dostatek dat pro export.');
+      return;
+    }
+
+    const workbook = XLSX.utils.book_new();
+
+    // TODO: Implementovat jednotlivé listy
+    // List 1: Souhrn
+    // List 2: Statistiky
+    // List 3: Sčítání dopravy
+    // List 4: Výpočet hluku
+
+    alert('Export do Excelu - zatím v implementaci');
+  };
 
   return (
     <div className="space-y-6">
@@ -200,6 +243,40 @@ export default function Summary({
                 <span className="text-sm">NE (limit 60/50 dB)</span>
               </label>
             </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Export do Excelu */}
+      <div className="bg-blue-50 p-6 rounded-lg border border-blue-200">
+        <h3 className="text-lg font-semibold mb-4 text-blue-900">📥 Export do Excelu</h3>
+        <div className="flex items-center gap-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Nastavit čas začátku měření (hodina)
+            </label>
+            <select
+              value={startHour}
+              onChange={(e) => setStartHour(Number(e.target.value))}
+              className="px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            >
+              {Array.from({ length: 24 }, (_, i) => (
+                <option key={i} value={i}>
+                  {i.toString().padStart(2, '0')}:00
+                </option>
+              ))}
+            </select>
+            <p className="text-xs text-gray-500 mt-1">
+              Tabulky v Excelu budou začínat od této hodiny
+            </p>
+          </div>
+          <div className="flex-1">
+            <button
+              onClick={handleExcelExport}
+              className="px-6 py-3 bg-green-600 hover:bg-green-700 text-white rounded-md transition-colors font-semibold shadow-sm flex items-center gap-2"
+            >
+              📥 Stáhnout do Excelu
+            </button>
           </div>
         </div>
       </div>

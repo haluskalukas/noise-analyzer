@@ -763,6 +763,11 @@ export default function Home() {
                     onUncertaintyChange={setSummaryUncertainty}
                     roadBefore2001={summaryRoadBefore2001}
                     onRoadBefore2001Change={setSummaryRoadBefore2001}
+                    stats={currentStats}
+                    trafficCounts={trafficCounts}
+                    countingGrouped={countingGrouped}
+                    rpdiGrouped={rpdiGrouped}
+                    speed={speed}
                   />
                 )}
               </div>
