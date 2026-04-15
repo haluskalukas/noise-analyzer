@@ -197,7 +197,9 @@ export default function Summary({
     // Přeuspořádané hodiny
     const reorderedHours = reorderHours(stats.hourlyAvgs, startHour);
     reorderedHours.forEach((hourData) => {
-      const displayHour = hourData.hour.toString().padStart(2, '0') + ':00';
+      const currentHour = hourData.hour.toString().padStart(2, '0');
+      const nextHour = ((hourData.hour + 1) % 24).toString().padStart(2, '0');
+      const displayHour = `${currentHour}:00 - ${nextHour}:00`;
       statistikyData.push([
         displayHour,
         formatCzechNumber(hourData.avg),
@@ -210,8 +212,8 @@ export default function Summary({
 
     statistikyData.push([]);
     statistikyData.push(['PRŮMĚRY:']);
-    statistikyData.push(['Den (6-22h):', formatCzechNumber(stats.dayAvg) + ' dB(A)']);
-    statistikyData.push(['Noc (22-6h):', formatCzechNumber(stats.nightAvg) + ' dB(A)']);
+    statistikyData.push(['Den (6-22h):', formatCzechNumber(stats.dayAvg)]);
+    statistikyData.push(['Noc (22-6h):', formatCzechNumber(stats.nightAvg)]);
 
     const ws2 = XLSX.utils.aoa_to_sheet(statistikyData);
     XLSX.utils.book_append_sheet(workbook, ws2, 'Statistiky');
@@ -226,7 +228,9 @@ export default function Summary({
     // Přeuspořádané hodiny sčítání
     const reorderedTraffic = reorderHours(trafficCounts, startHour);
     reorderedTraffic.forEach((hourData, index) => {
-      const displayHour = hourData.hour.toString().padStart(2, '0') + ':00';
+      const currentHour = hourData.hour.toString().padStart(2, '0');
+      const nextHour = ((hourData.hour + 1) % 24).toString().padStart(2, '0');
+      const displayHour = `${currentHour}:00 - ${nextHour}:00`;
       scitaniData.push([
         displayHour,
         hourData.OA,
