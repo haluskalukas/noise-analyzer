@@ -6,6 +6,7 @@ import { NoiseStats } from '@/types';
 import { HourlyTrafficCount, GroupedTrafficSummary } from '@/types/traffic';
 import { calculateTrafficSummary } from '@/lib/trafficCalculations';
 import { calculateNoise } from '@/lib/noiseCalculator';
+import { WeatherData } from '@/components/Weather';
 
 interface SummaryProps {
   measuredDayAvg: number; // naměřený průměr den ze statistik
@@ -26,6 +27,7 @@ interface SummaryProps {
   countingGrouped?: GroupedTrafficSummary | null;
   rpdiGrouped?: GroupedTrafficSummary | null;
   speed?: number;
+  weatherData?: WeatherData[];
 }
 
 // Helper funkce pro formátování čísel s českou desetinnou čárkou
@@ -51,6 +53,7 @@ export default function Summary({
   countingGrouped,
   rpdiGrouped,
   speed,
+  weatherData = [],
 }: SummaryProps) {
   // Použij external state pokud je poskytnut, jinak internal state
   const [internalAddress, setInternalAddress] = useState<string>('');
@@ -462,6 +465,42 @@ export default function Summary({
 
     const ws4 = XLSX.utils.aoa_to_sheet(hlukData);
     XLSX.utils.book_append_sheet(workbook, ws4, 'Výpočet hluku');
+
+    // ===== LIST 5: POČASÍ =====
+    if (weatherData && weatherData.length > 0) {
+      // Pomocná funkce pro směr větru
+      const getWindDirection = (degrees: number): string => {
+        const directions = ['S', 'SSV', 'SV', 'VSV', 'V', 'VJV', 'JV', 'JJV', 'J', 'JJZ', 'JZ', 'ZJZ', 'Z', 'ZSZ', 'SZ', 'SSZ'];
+        const index = Math.round(degrees / 22.5) % 16;
+        return directions[index];
+      };
+
+      const pocasiData = [
+        ['METEOROLOGICKÉ PODMÍNKY'],
+        [],
+        ['Čas', 'Teplota [°C]', 'Vlhkost [%]', 'Tlak [hPa]', 'Rychlost větru [km/h]', 'Směr větru'],
+      ];
+
+      weatherData.forEach((data) => {
+        const currentHour = data.hour.toString().padStart(2, '0');
+        const nextHour = ((data.hour + 1) % 24).toString().padStart(2, '0');
+        const displayHour = `${currentHour}:00 - ${nextHour}:00`;
+        pocasiData.push([
+          displayHour,
+          formatCzechNumber(data.temperature),
+          data.humidity.toString(),
+          formatCzechNumber(data.pressure),
+          formatCzechNumber(data.windSpeed),
+          `${data.windDirection}° (${getWindDirection(data.windDirection)})`,
+        ]);
+      });
+
+      pocasiData.push([]);
+      pocasiData.push(['Zdroj dat: Open-Meteo.com (CC BY 4.0)']);
+
+      const ws5 = XLSX.utils.aoa_to_sheet(pocasiData);
+      XLSX.utils.book_append_sheet(workbook, ws5, 'Počasí');
+    }
 
     // Stáhnout Excel soubor
     const fileName = `Mereni_hluku_${address ? address.replace(/[^a-zA-Z0-9]/g, '_') : 'export'}_${new Date().toISOString().split('T')[0]}.xlsx`;

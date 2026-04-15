@@ -8,6 +8,7 @@ import { Statistics } from '@/components/Statistics';
 import { TrafficCounting } from '@/components/TrafficCounting';
 import NoiseCalculator from '@/components/NoiseCalculator';
 import Summary from '@/components/Summary';
+import Weather, { WeatherData } from '@/components/Weather';
 import { NoiseData, TimeFilter, NoiseDataPoint, NoiseStats, HourlyAvg } from '@/types';
 import { HourlyTrafficCount, GroupedTrafficSummary } from '@/types/traffic';
 import { initializeHourlyCounts, calculateTrafficSummary, calculateGroupedSummary, calculateTP189GroupedSummary } from '@/lib/trafficCalculations';
@@ -76,7 +77,7 @@ function calculateStats(points: NoiseDataPoint[]): NoiseStats {
 export default function Home() {
   const [noiseData, setNoiseData] = useState<NoiseData | null>(null);
   const [timeFilter, setTimeFilter] = useState<TimeFilter>({ type: 'all' });
-  const [activeTab, setActiveTab] = useState<'chart' | 'stats' | 'counting' | 'noise' | 'summary'>('chart');
+  const [activeTab, setActiveTab] = useState<'chart' | 'stats' | 'counting' | 'noise' | 'summary' | 'weather'>('chart');
   const [deletedIndices, setDeletedIndices] = useState<Set<number>>(new Set());
 
   // Traffic counting state (zachováváno mezi kartami)
@@ -91,6 +92,9 @@ export default function Home() {
   const [summaryFacadeReflection, setSummaryFacadeReflection] = useState<boolean>(false);
   const [summaryUncertainty, setSummaryUncertainty] = useState<number>(1.8);
   const [summaryRoadBefore2001, setSummaryRoadBefore2001] = useState<boolean>(false);
+
+  // Weather state (zachováváno mezi kartami)
+  const [weatherData, setWeatherData] = useState<WeatherData[]>([]);
 
   // Load from localStorage on mount
   useEffect(() => {
@@ -148,6 +152,9 @@ export default function Home() {
         if (parsed.summaryRoadBefore2001 !== undefined) {
           setSummaryRoadBefore2001(parsed.summaryRoadBefore2001);
         }
+        if (parsed.weatherData) {
+          setWeatherData(parsed.weatherData);
+        }
       }
     } catch (error) {
       console.error('Error loading saved state:', error);
@@ -172,6 +179,7 @@ export default function Home() {
           summaryFacadeReflection,
           summaryUncertainty,
           summaryRoadBefore2001,
+          weatherData,
           timestamp: new Date().toISOString(),
         };
         localStorage.setItem(STORAGE_KEY, JSON.stringify(toSave));
@@ -179,7 +187,7 @@ export default function Home() {
         console.error('Error saving state:', error);
       }
     }
-  }, [noiseData, deletedIndices, timeFilter, activeTab, trafficCounts, countingDate, roadType, showRPDI, speed, summaryAddress, summaryFacadeReflection, summaryUncertainty, summaryRoadBefore2001]);
+  }, [noiseData, deletedIndices, timeFilter, activeTab, trafficCounts, countingDate, roadType, showRPDI, speed, summaryAddress, summaryFacadeReflection, summaryUncertainty, summaryRoadBefore2001, weatherData]);
 
   // Recalculate statistics when data is deleted
   const currentStats = useMemo(() => {
@@ -403,6 +411,8 @@ export default function Home() {
           summaryFacadeReflection,
           summaryUncertainty,
           summaryRoadBefore2001,
+          // Weather data
+          weatherData,
         },
       };
 
@@ -496,6 +506,11 @@ export default function Home() {
         }
         if (data.summaryRoadBefore2001 !== undefined) {
           setSummaryRoadBefore2001(data.summaryRoadBefore2001);
+        }
+
+        // Restore weather data
+        if (data.weatherData) {
+          setWeatherData(data.weatherData);
         }
 
         alert(`Projekt "${projectData.name}" byl načten!\n\nVšechna data včetně všech záložek jsou k dispozici.`);
@@ -713,6 +728,11 @@ export default function Home() {
                     onClick={() => setActiveTab('summary')}
                     label="📋 Souhrn"
                   />
+                  <TabButton
+                    active={activeTab === 'weather'}
+                    onClick={() => setActiveTab('weather')}
+                    label="🌤️ Počasí"
+                  />
                 </nav>
               </div>
 
@@ -768,6 +788,15 @@ export default function Home() {
                     countingGrouped={countingGrouped}
                     rpdiGrouped={rpdiGrouped}
                     speed={speed}
+                    weatherData={weatherData}
+                  />
+                )}
+                {activeTab === 'weather' && (
+                  <Weather
+                    address={summaryAddress}
+                    countingDate={countingDate}
+                    weatherData={weatherData}
+                    onWeatherDataChange={setWeatherData}
                   />
                 )}
               </div>
