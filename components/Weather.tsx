@@ -4,6 +4,7 @@ import { useState } from 'react';
 
 export interface WeatherData {
   hour: number;
+  datetime?: string; // začátek hodiny, místní čas "YYYY-MM-DDTHH:00" (starší projekty ho nemají)
   temperature: number; // °C
   humidity: number; // %
   pressure: number; // hPa
@@ -14,16 +15,36 @@ export interface WeatherData {
 interface WeatherProps {
   weatherData?: WeatherData[];
   onWeatherDataChange?: (data: WeatherData[]) => void;
+  measurementStart?: Date; // první bod nahraného měření – výchozí „od“
+  measurementEnd?: Date; // poslední bod nahraného měření – výchozí „do“
 }
+
+const pad = (n: number) => n.toString().padStart(2, '0');
+
+// Date -> "YYYY-MM-DDTHH:MM" v místním čase (formát pro <input type="datetime-local">)
+const toLocalInput = (d?: Date): string => {
+  if (!d || isNaN(d.getTime())) return '';
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+};
+
+// "YYYY-MM-DDTHH:MM" -> "D. M. YYYY"
+export const formatWeatherDate = (datetime: string): string => {
+  const [y, m, d] = datetime.slice(0, 10).split('-').map(Number);
+  return `${d}. ${m}. ${y}`;
+};
 
 export default function Weather({
   weatherData = [],
   onWeatherDataChange,
+  measurementStart,
+  measurementEnd,
 }: WeatherProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [address, setAddress] = useState<string>('');
-  const [countingDate, setCountingDate] = useState<string>(new Date().toISOString().split('T')[0]);
+  // Období měření od–do (datum a čas), výchozí hodnoty z nahraného měření
+  const [periodFrom, setPeriodFrom] = useState<string>(() => toLocalInput(measurementStart));
+  const [periodTo, setPeriodTo] = useState<string>(() => toLocalInput(measurementEnd));
 
   // Pomocná funkce pro převod směru větru na světovou stranu (pouze 8 hlavních směrů)
   const getWindDirection = (degrees: number): string => {
@@ -55,8 +76,12 @@ export default function Weather({
 
   // Načtení meteorologických dat
   const handleLoadWeather = async () => {
-    if (!address || !countingDate) {
-      setError('Vyplňte adresu měření a datum sčítání');
+    if (!address || !periodFrom || !periodTo) {
+      setError('Vyplňte adresu měření a období od–do');
+      return;
+    }
+    if (periodTo <= periodFrom) {
+      setError('Konec období musí být po jeho začátku');
       return;
     }
 
@@ -77,29 +102,40 @@ export default function Weather({
         `https://api.open-meteo.com/v1/forecast?` +
         `latitude=${coords.lat}&longitude=${coords.lon}` +
         `&hourly=temperature_2m,relative_humidity_2m,surface_pressure,wind_speed_10m,wind_direction_10m` +
-        `&start_date=${countingDate}&end_date=${countingDate}` +
+        `&start_date=${periodFrom.slice(0, 10)}&end_date=${periodTo.slice(0, 10)}` +
         `&timezone=Europe/Prague`
       );
 
       const data = await response.json();
 
-      if (!data.hourly) {
-        setError('Nepodařilo se načíst meteorologická data');
+      if (!data.hourly || !Array.isArray(data.hourly.time)) {
+        setError(`Nepodařilo se načíst meteorologická data${data.reason ? ` (${data.reason})` : ''}`);
         setIsLoading(false);
         return;
       }
 
-      // 3. Zpracovat data do naší struktury
+      // 3. Vybrat hodiny, které zasahují do období od–do, a přiřadit je podle data a času.
+      //    Hodina se bere, když začíná před „do“ a končí po „od“
+      //    (např. měření od 17:13 zahrne hodinu 17:00–18:00).
+      const fromHour = periodFrom.slice(0, 13) + ':00'; // začátek hodiny, ve které měření začalo
       const weatherArray: WeatherData[] = [];
-      for (let i = 0; i < 24; i++) {
+      data.hourly.time.forEach((time: string, i: number) => {
+        if (time < fromHour || time >= periodTo) return;
         weatherArray.push({
-          hour: i,
+          hour: Number(time.slice(11, 13)),
+          datetime: time,
           temperature: Math.round(data.hourly.temperature_2m[i] * 10) / 10,
           humidity: Math.round(data.hourly.relative_humidity_2m[i]),
           pressure: Math.round(data.hourly.surface_pressure[i] * 10) / 10,
           windSpeed: Math.round(data.hourly.wind_speed_10m[i] * 10) / 10,
           windDirection: Math.round(data.hourly.wind_direction_10m[i]),
         });
+      });
+
+      if (weatherArray.length === 0) {
+        setError('Pro zadané období nejsou k dispozici žádná data');
+        setIsLoading(false);
+        return;
       }
 
       // 4. Uložit data
@@ -134,23 +170,42 @@ export default function Weather({
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
           </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Datum měření
-            </label>
-            <input
-              type="date"
-              value={countingDate}
-              onChange={(e) => setCountingDate(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Měření od (datum a čas)
+              </label>
+              <input
+                type="datetime-local"
+                value={periodFrom}
+                onChange={(e) => setPeriodFrom(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Měření do (datum a čas)
+              </label>
+              <input
+                type="datetime-local"
+                value={periodTo}
+                onChange={(e) => setPeriodTo(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
           </div>
+          {measurementStart && measurementEnd && (
+            <p className="text-xs text-gray-500">
+              Předvyplněno podle nahraného měření ({toLocalInput(measurementStart).replace('T', ' ')} –{' '}
+              {toLocalInput(measurementEnd).replace('T', ' ')}). Meteo se přiřadí ke skutečnému datu a hodině.
+            </p>
+          )}
         </div>
 
         {/* Tlačítko pro načtení */}
         <button
           onClick={handleLoadWeather}
-          disabled={isLoading || !address || !countingDate}
+          disabled={isLoading || !address || !periodFrom || !periodTo}
           className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed mb-4"
         >
           {isLoading ? 'Načítám...' : 'Načíst data z Open-Meteo'}
@@ -169,6 +224,9 @@ export default function Weather({
             <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-gray-50">
                 <tr>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Datum
+                  </th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Čas
                   </th>
@@ -190,11 +248,14 @@ export default function Weather({
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
-                {weatherData.map((data) => {
+                {weatherData.map((data, i) => {
                   const currentHour = data.hour.toString().padStart(2, '0');
                   const nextHour = ((data.hour + 1) % 24).toString().padStart(2, '0');
                   return (
-                    <tr key={data.hour} className="hover:bg-gray-50">
+                    <tr key={data.datetime ?? i} className="hover:bg-gray-50">
+                      <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
+                        {data.datetime ? formatWeatherDate(data.datetime) : '–'}
+                      </td>
                       <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
                         {currentHour}:00 - {nextHour}:00
                       </td>
@@ -225,7 +286,7 @@ export default function Weather({
         {weatherData.length === 0 && !error && (
           <div className="text-center py-8 text-gray-500">
             <p>Zatím nejsou načtena žádná meteorologická data.</p>
-            <p className="text-sm mt-2">Zadejte adresu a datum sčítání, pak klikněte na tlačítko "Načíst data".</p>
+            <p className="text-sm mt-2">Zadejte adresu a období měření od–do, pak klikněte na tlačítko &quot;Načíst data&quot;.</p>
           </div>
         )}
 

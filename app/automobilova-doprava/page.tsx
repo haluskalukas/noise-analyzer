@@ -742,6 +742,8 @@ export default function Home() {
                   <Weather
                     weatherData={weatherData}
                     onWeatherDataChange={setWeatherData}
+                    measurementStart={noiseData.points[0]?.datetime}
+                    measurementEnd={noiseData.points[noiseData.points.length - 1]?.datetime}
                   />
                 )}
               </div>
