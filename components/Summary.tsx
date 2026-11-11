@@ -6,7 +6,7 @@ import { NoiseStats } from '@/types';
 import { HourlyTrafficCount, GroupedTrafficSummary } from '@/types/traffic';
 import { calculateTrafficSummary } from '@/lib/trafficCalculations';
 import { calculateNoise } from '@/lib/noiseCalculator';
-import { WeatherData } from '@/components/Weather';
+import { WeatherData, formatWeatherDate } from '@/components/Weather';
 
 interface SummaryProps {
   measuredDayAvg: number; // naměřený průměr den ze statistik
@@ -475,20 +475,29 @@ export default function Summary({
         return directions[index];
       };
 
+      // Nová data mají u každé hodiny datum a čas (období od–do) – jdou chronologicky.
+      // Starší projekty mají jen hodinu 0–23 – ty se jako dřív seřadí podle startHour.
+      const hasDatetime = weatherData.every((d) => !!d.datetime);
+
       const pocasiData = [
         ['METEOROLOGICKÉ PODMÍNKY'],
         [],
-        ['Čas', 'Teplota [°C]', 'Vlhkost [%]', 'Tlak [hPa]', 'Rychlost větru [km/h]', 'Směr větru'],
+        [
+          ...(hasDatetime ? ['Datum'] : []),
+          'Čas', 'Teplota [°C]', 'Vlhkost [%]', 'Tlak [hPa]', 'Rychlost větru [km/h]', 'Směr větru',
+        ],
       ];
 
-      // Přeuspořádané hodiny počasí podle startHour
-      const reorderedWeather = reorderHours(weatherData, startHour);
+      const orderedWeather: WeatherData[] = hasDatetime
+        ? [...weatherData].sort((a, b) => (a.datetime! < b.datetime! ? -1 : 1))
+        : reorderHours(weatherData, startHour);
 
-      reorderedWeather.forEach((data) => {
+      orderedWeather.forEach((data) => {
         const currentHour = data.hour.toString().padStart(2, '0');
         const nextHour = ((data.hour + 1) % 24).toString().padStart(2, '0');
         const displayHour = `${currentHour}:00 - ${nextHour}:00`;
         pocasiData.push([
+          ...(hasDatetime ? [formatWeatherDate(data.datetime!)] : []),
           displayHour,
           formatCzechNumber(data.temperature),
           data.humidity.toString(),
