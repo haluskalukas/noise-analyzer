@@ -101,39 +101,40 @@ function parseDateTime(dateStr: any, timeStr?: any): Date | null {
       return dateStr;
     }
 
-    // Excel serial date
+    // Excel serial date (datum, případně datum + čas v desetinné části)
     if (typeof dateStr === 'number') {
-      // Convert Excel serial date to JavaScript Date
-      // Excel dates start from 1900-01-01, but there's a bug where 1900 is treated as a leap year
-      const excelEpoch = new Date(1899, 11, 30);
+      // Datum počítáme v UTC, aby výsledek neovlivnil posun časového pásma
+      // epochy 1899 ani letní čas; pak sestavíme místní datum a čas.
       const daysOffset = Math.floor(dateStr);
-      const timeOffset = dateStr - daysOffset;
+      const base = new Date(Date.UTC(1899, 11, 30) + daysOffset * 86400000);
+      const y = base.getUTCFullYear();
+      const m = base.getUTCMonth();
+      const d = base.getUTCDate();
 
-      let datetime = new Date(excelEpoch.getTime() + daysOffset * 86400000);
-
-      // If time is provided separately
-      if (timeStr) {
+      // Čas: samostatný sloupec, jinak desetinná část data
+      let seconds = Math.round((dateStr - daysOffset) * 86400);
+      const hasTime = timeStr !== undefined && timeStr !== null && timeStr !== '';
+      if (hasTime) {
         if (typeof timeStr === 'number') {
-          // Time as fraction of day
-          const hours = Math.floor(timeStr * 24);
-          const minutes = Math.floor((timeStr * 24 - hours) * 60);
-          const seconds = Math.floor(((timeStr * 24 - hours) * 60 - minutes) * 60);
-          datetime.setHours(hours, minutes, seconds);
+          // Čas jako zlomek dne. Některé exporty (SVAN) ukládají čas po půlnoci
+          // jako 1,000… (1. 1. 1900 0:00) – den se bere ze sloupce data,
+          // proto jen desetinná část.
+          seconds = Math.round((timeStr - Math.floor(timeStr)) * 86400);
+        } else if (timeStr instanceof Date) {
+          seconds = timeStr.getHours() * 3600 + timeStr.getMinutes() * 60 + timeStr.getSeconds();
         } else if (typeof timeStr === 'string') {
-          const timeParts = timeStr.split(':');
+          const timeParts = timeStr.trim().split(':');
           if (timeParts.length >= 2) {
-            datetime.setHours(parseInt(timeParts[0]), parseInt(timeParts[1]));
+            seconds =
+              parseInt(timeParts[0]) * 3600 +
+              parseInt(timeParts[1]) * 60 +
+              (timeParts[2] ? Math.round(parseFloat(timeParts[2])) : 0);
           }
         }
-      } else if (timeOffset > 0) {
-        // Time is in the decimal part of the date number
-        const hours = Math.floor(timeOffset * 24);
-        const minutes = Math.floor((timeOffset * 24 - hours) * 60);
-        const seconds = Math.floor(((timeOffset * 24 - hours) * 60 - minutes) * 60);
-        datetime.setHours(hours, minutes, seconds);
       }
+      seconds = ((seconds % 86400) + 86400) % 86400; // zaokrouhlení na 24:00:00 → 0:00:00
 
-      return datetime;
+      return new Date(y, m, d, Math.floor(seconds / 3600), Math.floor((seconds % 3600) / 60), seconds % 60);
     }
 
     // String format
