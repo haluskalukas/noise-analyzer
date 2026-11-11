@@ -6,17 +6,20 @@ import { format } from 'date-fns';
 import * as XLSX from 'xlsx';
 import { VibrationTrainDetail } from './VibrationTrainDetail';
 import { formatNumber } from '@/lib/format';
+import { WeatherData, weatherSheetRows } from '@/components/Weather';
 
 interface VibrationTrainTableProps {
   trains: VibrationTrain[];
   onUpdateTrain: (id: string, field: keyof VibrationTrain, value: string) => void;
   onDeleteTrain: (id: string) => void;
+  weatherData?: WeatherData[];
 }
 
 export function VibrationTrainTable({
   trains,
   onUpdateTrain,
   onDeleteTrain,
+  weatherData = [],
 }: VibrationTrainTableProps) {
   const [selectedTrain, setSelectedTrain] = useState<VibrationTrain | null>(null);
   const handleExport = () => {
@@ -59,6 +62,11 @@ export function VibrationTrainTable({
     // Create workbook
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, 'Vlaky - vibrace');
+
+    // Počasí (když je načtené v sekci Počasí)
+    if (weatherData.length > 0) {
+      XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(weatherSheetRows(weatherData)), 'Počasí');
+    }
 
     // Export
     XLSX.writeFile(wb, `vibrace_vlaky_${format(new Date(), 'yyyy-MM-dd_HHmmss')}.xlsx`);
