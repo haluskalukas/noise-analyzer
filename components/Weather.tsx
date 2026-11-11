@@ -33,6 +33,44 @@ export const formatWeatherDate = (datetime: string): string => {
   return `${d}. ${m}. ${y}`;
 };
 
+const WIND_DIRECTIONS = ['S', 'SV', 'V', 'JV', 'J', 'JZ', 'Z', 'SZ'];
+const czNum = (n: number) => n.toFixed(1).replace('.', ',');
+
+/**
+ * Řádky listu „Počasí“ pro export do Excelu (chronologicky, se sloupcem Datum,
+ * když hodiny mají datum). Používá ho export železniční dopravy.
+ */
+export function weatherSheetRows(weatherData: WeatherData[]): string[][] {
+  const hasDatetime = weatherData.every((d) => !!d.datetime);
+  const ordered = hasDatetime
+    ? [...weatherData].sort((a, b) => (a.datetime! < b.datetime! ? -1 : 1))
+    : weatherData;
+  const rows: string[][] = [
+    ['METEOROLOGICKÉ PODMÍNKY'],
+    [],
+    [
+      ...(hasDatetime ? ['Datum'] : []),
+      'Čas', 'Teplota [°C]', 'Vlhkost [%]', 'Tlak [hPa]', 'Rychlost větru [km/h]', 'Směr větru',
+    ],
+  ];
+  ordered.forEach((d) => {
+    const h = d.hour.toString().padStart(2, '0');
+    const next = ((d.hour + 1) % 24).toString().padStart(2, '0');
+    rows.push([
+      ...(hasDatetime ? [formatWeatherDate(d.datetime!)] : []),
+      `${h}:00 - ${next}:00`,
+      czNum(d.temperature),
+      d.humidity.toString(),
+      czNum(d.pressure),
+      czNum(d.windSpeed),
+      WIND_DIRECTIONS[Math.round(d.windDirection / 45) % 8],
+    ]);
+  });
+  rows.push([]);
+  rows.push(['Zdroj dat: Open-Meteo.com (CC BY 4.0)']);
+  return rows;
+}
+
 export default function Weather({
   weatherData = [],
   onWeatherDataChange,

@@ -5,14 +5,16 @@ import { TrainCategory } from '@/types/train-calculation';
 import { formatNumber } from '@/lib/format';
 import { useMemo } from 'react';
 import * as XLSX from 'xlsx';
+import { WeatherData, weatherSheetRows } from '@/components/Weather';
 
 interface TrainCalculationsProps {
   trains: Train[];
   userInputs: Map<string, { pocetVlakuDen: number; pocetVlakuNoc: number }>;
   onUserInputsChange: (inputs: Map<string, { pocetVlakuDen: number; pocetVlakuNoc: number }>) => void;
+  weatherData?: WeatherData[];
 }
 
-export function TrainCalculations({ trains, userInputs, onUserInputsChange }: TrainCalculationsProps) {
+export function TrainCalculations({ trains, userInputs, onUserInputsChange, weatherData = [] }: TrainCalculationsProps) {
 
   // Group trains by category and calculate LAE averages (pure calculation, no dependency on state)
   const categories = useMemo(() => {
@@ -131,6 +133,11 @@ export function TrainCalculations({ trains, userInputs, onUserInputsChange }: Tr
 
     const ws = XLSX.utils.aoa_to_sheet(data);
     XLSX.utils.book_append_sheet(wb, ws, 'Dopočet');
+
+    // Počasí (když je v záložce Počasí načtené)
+    if (weatherData.length > 0) {
+      XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(weatherSheetRows(weatherData)), 'Počasí');
+    }
 
     const timestamp = new Date().toISOString().split('T')[0];
     XLSX.writeFile(wb, `zeleznicni_doprava_dopocet_${timestamp}.xlsx`);
