@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { VibrationFileUpload } from '@/components/VibrationFileUpload';
 import { VibrationChart } from '@/components/VibrationChart';
 import { VibrationTrainTable } from '@/components/VibrationTrainTable';
+import Weather, { WeatherData } from '@/components/Weather';
 import { VibrationData, VibrationDataPoint, VibrationTrain } from '@/types/vibration';
 import { calculateTrainVibration } from '@/lib/vibrationCalculations';
 import { format } from 'date-fns';
@@ -15,6 +16,7 @@ const STORAGE_KEY = 'zeleznicni-doprava-vibrace-state';
 export default function ZeleznicniDopravaVibrace() {
   const [vibrationData, setVibrationData] = useState<VibrationData | null>(null);
   const [trains, setTrains] = useState<VibrationTrain[]>([]);
+  const [weatherData, setWeatherData] = useState<WeatherData[]>([]);
 
   // Note: We don't use localStorage for vibration data because files are too large
   // Users should use Download/Upload project instead
@@ -22,11 +24,13 @@ export default function ZeleznicniDopravaVibrace() {
   const handleDataLoaded = (data: VibrationData) => {
     setVibrationData(data);
     setTrains([]);
+    setWeatherData([]);
   };
 
   const handleReset = () => {
     setVibrationData(null);
     setTrains([]);
+    setWeatherData([]);
     localStorage.removeItem(STORAGE_KEY);
   };
 
@@ -89,6 +93,7 @@ export default function ZeleznicniDopravaVibrace() {
         data: {
           vibrationData,
           trains,
+          weatherData,
         },
       };
 
@@ -151,6 +156,9 @@ export default function ZeleznicniDopravaVibrace() {
           }));
           setTrains(restoredTrains);
         }
+
+        // Restore weather data (starší projekty ho nemají)
+        setWeatherData(data.weatherData ?? []);
 
         alert(`Projekt "${projectData.name}" byl načten!\n\nVšechna data včetně grafu jsou k dispozici.`);
       } catch (error) {
@@ -280,8 +288,17 @@ export default function ZeleznicniDopravaVibrace() {
                 trains={trains}
                 onUpdateTrain={handleUpdateTrain}
                 onDeleteTrain={handleDeleteTrain}
+                weatherData={weatherData}
               />
             </div>
+
+            {/* Počasí */}
+            <Weather
+              weatherData={weatherData}
+              onWeatherDataChange={setWeatherData}
+              measurementStart={vibrationData.points[0]?.datetime}
+              measurementEnd={vibrationData.points[vibrationData.points.length - 1]?.datetime}
+            />
           </div>
         )}
       </main>
