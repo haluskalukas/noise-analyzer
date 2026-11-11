@@ -6,6 +6,8 @@ import { FileUpload } from '@/components/FileUpload';
 import { NoiseChart } from '@/components/NoiseChart';
 import { TrainTable } from '@/components/TrainTable';
 import { TrainCalculations } from '@/components/TrainCalculations';
+import Weather, { WeatherData } from '@/components/Weather';
+import { repairTimeline } from '@/lib/noiseStats';
 import { NoiseData, TimeFilter, NoiseDataPoint } from '@/types';
 import { Train } from '@/types/train';
 import { format } from 'date-fns';
@@ -18,7 +20,8 @@ export default function ZeleznicniDopravaHluk() {
   const [timeFilter, setTimeFilter] = useState<TimeFilter>({ type: 'all' });
   const [trains, setTrains] = useState<Train[]>([]);
   const [deletedIndices, setDeletedIndices] = useState<Set<number>>(new Set());
-  const [activeTab, setActiveTab] = useState<'trains' | 'calculations'>('trains');
+  const [activeTab, setActiveTab] = useState<'trains' | 'calculations' | 'weather'>('trains');
+  const [weatherData, setWeatherData] = useState<WeatherData[]>([]);
   const [userInputs, setUserInputs] = useState<Map<string, { pocetVlakuDen: number; pocetVlakuNoc: number }>>(new Map());
 
   // Load from localStorage on mount
@@ -33,10 +36,10 @@ export default function ZeleznicniDopravaHluk() {
           const restoredData = {
             ...parsed.noiseData,
             date: new Date(parsed.noiseData.date),
-            points: parsed.noiseData.points.map((p: any) => ({
+            points: repairTimeline(parsed.noiseData.points.map((p: any) => ({
               ...p,
               datetime: new Date(p.datetime),
-            })),
+            }))),
           };
           setNoiseData(restoredData);
         }
@@ -62,6 +65,9 @@ export default function ZeleznicniDopravaHluk() {
         if (parsed.deletedIndices) {
           setDeletedIndices(new Set(parsed.deletedIndices));
         }
+        if (parsed.weatherData) {
+          setWeatherData(parsed.weatherData);
+        }
       }
     } catch (error) {
       console.error('Error loading saved state:', error);
@@ -70,7 +76,7 @@ export default function ZeleznicniDopravaHluk() {
 
   // Save to localStorage whenever state changes
   useEffect(() => {
-    if (noiseData || trains.length > 0 || userInputs.size > 0) {
+    if (noiseData || trains.length > 0 || userInputs.size > 0 || weatherData.length > 0) {
       try {
         const toSave = {
           noiseData,
@@ -79,6 +85,7 @@ export default function ZeleznicniDopravaHluk() {
           activeTab,
           timeFilter,
           deletedIndices: Array.from(deletedIndices),
+          weatherData,
           timestamp: new Date().toISOString(),
         };
         localStorage.setItem(STORAGE_KEY, JSON.stringify(toSave));
@@ -86,13 +93,14 @@ export default function ZeleznicniDopravaHluk() {
         console.error('Error saving state:', error);
       }
     }
-  }, [noiseData, trains, userInputs, activeTab, timeFilter, deletedIndices]);
+  }, [noiseData, trains, userInputs, activeTab, timeFilter, deletedIndices, weatherData]);
 
   const handleDataLoaded = (data: NoiseData) => {
     setNoiseData(data);
     setTimeFilter({ type: 'all' });
     setTrains([]);
     setDeletedIndices(new Set());
+    setWeatherData([]);
   };
 
   const handleReset = () => {
@@ -102,6 +110,7 @@ export default function ZeleznicniDopravaHluk() {
     setDeletedIndices(new Set());
     setActiveTab('trains');
     setUserInputs(new Map());
+    setWeatherData([]);
     localStorage.removeItem(STORAGE_KEY);
   };
 
@@ -177,6 +186,7 @@ export default function ZeleznicniDopravaHluk() {
           activeTab,
           timeFilter,
           deletedIndices: Array.from(deletedIndices),
+          weatherData,
         },
       };
       savedProjects.push(projectData);
@@ -210,6 +220,7 @@ export default function ZeleznicniDopravaHluk() {
           activeTab,
           timeFilter,
           deletedIndices: Array.from(deletedIndices),
+          weatherData,
         },
       };
 
@@ -255,10 +266,10 @@ export default function ZeleznicniDopravaHluk() {
           const restoredData = {
             ...data.noiseData,
             date: new Date(data.noiseData.date),
-            points: data.noiseData.points.map((p: any) => ({
+            points: repairTimeline(data.noiseData.points.map((p: any) => ({
               ...p,
               datetime: new Date(p.datetime),
-            })),
+            }))),
           };
           setNoiseData(restoredData);
         }
@@ -286,6 +297,7 @@ export default function ZeleznicniDopravaHluk() {
         if (data.deletedIndices) {
           setDeletedIndices(new Set(data.deletedIndices));
         }
+        setWeatherData(data.weatherData ?? []);
 
         alert(`Projekt "${projectData.name}" byl načten!\n\nVšechna data včetně grafu jsou k dispozici.`);
       } catch (error) {
@@ -351,6 +363,7 @@ export default function ZeleznicniDopravaHluk() {
       if (data.deletedIndices) {
         setDeletedIndices(new Set(data.deletedIndices));
       }
+      setWeatherData(data.weatherData ?? []);
 
       alert(`Projekt "${project.name}" byl načten!\n\nGraf není dostupný (data nebyla uložena), ale všechny vlaky a výpočty jsou k dispozici.`);
     } catch (error) {
@@ -581,6 +594,11 @@ export default function ZeleznicniDopravaHluk() {
                     onClick={() => setActiveTab('calculations')}
                     label="📊 Dopočet"
                   />
+                  <TabButton
+                    active={activeTab === 'weather'}
+                    onClick={() => setActiveTab('weather')}
+                    label="🌤️ Počasí"
+                  />
                 </nav>
               </div>
 
@@ -597,6 +615,15 @@ export default function ZeleznicniDopravaHluk() {
                     trains={trains}
                     userInputs={userInputs}
                     onUserInputsChange={setUserInputs}
+                    weatherData={weatherData}
+                  />
+                )}
+                {activeTab === 'weather' && (
+                  <Weather
+                    weatherData={weatherData}
+                    onWeatherDataChange={setWeatherData}
+                    measurementStart={noiseData.points[0]?.datetime}
+                    measurementEnd={noiseData.points[noiseData.points.length - 1]?.datetime}
                   />
                 )}
               </div>
