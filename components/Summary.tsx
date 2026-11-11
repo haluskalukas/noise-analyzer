@@ -7,6 +7,7 @@ import { HourlyTrafficCount, GroupedTrafficSummary } from '@/types/traffic';
 import { calculateTrafficSummary } from '@/lib/trafficCalculations';
 import { calculateNoise } from '@/lib/noiseCalculator';
 import { WeatherData, formatWeatherDate } from '@/components/Weather';
+import { buildProtocolSheet } from '@/lib/protocolSheet';
 
 interface SummaryProps {
   measuredDayAvg: number; // naměřený průměr den ze statistik
@@ -107,15 +108,17 @@ export default function Summary({
   const limitNight = roadBefore2001 ? 58 : 50;
 
   // Výsledné hodnoty
-  // Výsledná = Naměřená + Korekce odraz + Korekce RPDI - Nejistota
+  // Výsledná = Naměřená + Korekce odraz + Korekce RPDI - Nejistota,
+  // naměřená hodnota zaokrouhlená na 0,1 dB jako v protokolu (aby součet v tabulce seděl)
+  const round1 = (n: number) => Math.round(n * 10) / 10;
   const finalDay =
     measuredDayAvg > 0
-      ? Math.round((measuredDayAvg + reflectionCorrection + rpdiCorrectionDay - uncertainty) * 10) / 10
+      ? round1(round1(round1(measuredDayAvg) + reflectionCorrection + rpdiCorrectionDay) - uncertainty)
       : null;
 
   const finalNight =
     measuredNightAvg > 0
-      ? Math.round((measuredNightAvg + reflectionCorrection + rpdiCorrectionNight - uncertainty) * 10) / 10
+      ? round1(round1(round1(measuredNightAvg) + reflectionCorrection + rpdiCorrectionNight) - uncertainty)
       : null;
 
   // Vyhodnocení limitu
@@ -186,6 +189,23 @@ export default function Summary({
       ['Den:', exceedsLimitDay ? 'Hygienický limit JE překročen' : 'Hygienický limit NENÍ překročen'],
       ['Noc:', exceedsLimitNight ? 'Hygienický limit JE překročen' : 'Hygienický limit NENÍ překročen'],
     ];
+
+    // ===== LIST 0: PROTOKOL – tabulky ve tvaru protokolu =====
+    const protokolData = buildProtocolSheet({
+      address: address || '',
+      stats,
+      trafficCounts,
+      weatherData,
+      startHour,
+      reflectionCorrection,
+      rpdiCorrectionDay,
+      rpdiCorrectionNight,
+      uncertainty,
+      roadBefore2001,
+    });
+    const ws0 = XLSX.utils.aoa_to_sheet(protokolData);
+    ws0['!cols'] = [{ wch: 28 }, { wch: 24 }, { wch: 14 }, ...Array.from({ length: 8 }, () => ({ wch: 12 }))];
+    XLSX.utils.book_append_sheet(workbook, ws0, 'Protokol');
 
     const ws1 = XLSX.utils.aoa_to_sheet(souhrnData);
     XLSX.utils.book_append_sheet(workbook, ws1, 'Souhrn');
