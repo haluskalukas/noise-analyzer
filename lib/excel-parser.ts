@@ -1,5 +1,6 @@
 import * as XLSX from 'xlsx';
-import { NoiseData, NoiseDataPoint, NoiseStats, HourlyAvg } from '@/types';
+import { NoiseData, NoiseDataPoint } from '@/types';
+import { calculateStats } from './noiseStats';
 
 /**
  * Parse Excel file with noise data
@@ -162,87 +163,3 @@ function parseDateTime(dateStr: any, timeStr?: any): Date | null {
   }
 }
 
-/**
- * Calculate logarithmic average for decibels
- * Formula: Leq = 10 * log10(1/n * sum(10^(Li/10)))
- */
-function calculateLogAverage(values: number[]): number {
-  if (values.length === 0) return 0;
-
-  const sumOfPowers = values.reduce((sum, db) => sum + Math.pow(10, db / 10), 0);
-  const average = sumOfPowers / values.length;
-  return 10 * Math.log10(average);
-}
-
-/**
- * Calculate percentile from sorted array
- * IMPORTANT: In acoustics, percentiles are reversed!
- * L5 = 5% of time noise is HIGHER (95th percentile of sorted values)
- * L95 = 95% of time noise is HIGHER (5th percentile of sorted values)
- */
-function getAcousticPercentile(sortedValues: number[], acousticPercentile: number): number {
-  // Reverse the percentile for acoustic notation
-  const statisticalPercentile = 1 - (acousticPercentile / 100);
-  const index = Math.floor(sortedValues.length * statisticalPercentile);
-  return sortedValues[Math.min(index, sortedValues.length - 1)];
-}
-
-function calculateStats(points: NoiseDataPoint[]): NoiseStats {
-  const values = points.map(p => p.value).sort((a, b) => a - b);
-
-  // Basic stats
-  const min = Math.min(...values);
-  const max = Math.max(...values);
-  const avg = calculateLogAverage(points.map(p => p.value)); // Logarithmic average!
-  const median = values[Math.floor(values.length / 2)];
-  const p10 = getAcousticPercentile(values, 10); // L10 = 10% času je hluk vyšší
-  const p90 = getAcousticPercentile(values, 90); // L90 = 90% času je hluk vyšší
-
-  // Day/Night averages (6:00-22:00 = day, 22:00-6:00 = night)
-  // IMPORTANT: Use logarithmic averaging for decibels!
-  const dayPoints = points.filter(p => p.hour >= 6 && p.hour < 22);
-  const nightPoints = points.filter(p => p.hour < 6 || p.hour >= 22);
-
-  const dayAvg = dayPoints.length > 0
-    ? calculateLogAverage(dayPoints.map(p => p.value))
-    : 0;
-
-  const nightAvg = nightPoints.length > 0
-    ? calculateLogAverage(nightPoints.map(p => p.value))
-    : 0;
-
-  // Hourly averages with percentiles
-  const hourlyAvgs: HourlyAvg[] = [];
-  for (let hour = 0; hour < 24; hour++) {
-    const hourPoints = points.filter(p => p.hour === hour);
-
-    if (hourPoints.length > 0) {
-      const hourValues = hourPoints.map(p => p.value).sort((a, b) => a - b);
-
-      hourlyAvgs.push({
-        hour,
-        avg: calculateLogAverage(hourPoints.map(p => p.value)), // Logarithmic!
-        min: Math.min(...hourValues),
-        max: Math.max(...hourValues),
-        count: hourPoints.length,
-        // Acoustic percentiles (reversed!)
-        p5: getAcousticPercentile(hourValues, 5),   // L5 = 5% času je hluk VYŠŠÍ
-        p10: getAcousticPercentile(hourValues, 10), // L10 = 10% času je hluk VYŠŠÍ
-        p90: getAcousticPercentile(hourValues, 90), // L90 = 90% času je hluk VYŠŠÍ
-        p95: getAcousticPercentile(hourValues, 95), // L95 = 95% času je hluk VYŠŠÍ
-      });
-    }
-  }
-
-  return {
-    min,
-    max,
-    avg,
-    median,
-    p10,
-    p90,
-    dayAvg,
-    nightAvg,
-    hourlyAvgs,
-  };
-}

@@ -9,70 +9,17 @@ import { TrafficCounting } from '@/components/TrafficCounting';
 import NoiseCalculator from '@/components/NoiseCalculator';
 import Summary from '@/components/Summary';
 import Weather, { WeatherData } from '@/components/Weather';
-import { NoiseData, TimeFilter, NoiseDataPoint, NoiseStats, HourlyAvg } from '@/types';
+import { NoiseData, TimeFilter } from '@/types';
 import { HourlyTrafficCount, GroupedTrafficSummary } from '@/types/traffic';
 import { initializeHourlyCounts, calculateTrafficSummary, calculateGroupedSummary, calculateTP189GroupedSummary } from '@/lib/trafficCalculations';
 import { RoadType } from '@/lib/tp189coefficients';
 import { calculateRPDI } from '@/lib/rpdiCalculator';
 import { calculateNoise } from '@/lib/noiseCalculator';
+import { calculateStats } from '@/lib/noiseStats';
 import { format } from 'date-fns';
 import { cs } from 'date-fns/locale';
 
 const STORAGE_KEY = 'automobilova-doprava-state';
-
-// Helper functions for statistics calculation
-function calculateLogAverage(values: number[]): number {
-  if (values.length === 0) return 0;
-  const sumOfPowers = values.reduce((sum, db) => sum + Math.pow(10, db / 10), 0);
-  const average = sumOfPowers / values.length;
-  return 10 * Math.log10(average);
-}
-
-function getAcousticPercentile(sortedValues: number[], acousticPercentile: number): number {
-  const statisticalPercentile = 1 - (acousticPercentile / 100);
-  const index = Math.floor(sortedValues.length * statisticalPercentile);
-  return sortedValues[Math.min(index, sortedValues.length - 1)];
-}
-
-function calculateStats(points: NoiseDataPoint[]): NoiseStats {
-  const values = points.map(p => p.value).sort((a, b) => a - b);
-
-  const min = Math.min(...values);
-  const max = Math.max(...values);
-  const avg = calculateLogAverage(points.map(p => p.value));
-  const median = values[Math.floor(values.length / 2)];
-  const p10 = getAcousticPercentile(values, 10);
-  const p90 = getAcousticPercentile(values, 90);
-
-  const dayPoints = points.filter(p => p.hour >= 6 && p.hour < 22);
-  const nightPoints = points.filter(p => p.hour < 6 || p.hour >= 22);
-
-  const dayAvg = dayPoints.length > 0 ? calculateLogAverage(dayPoints.map(p => p.value)) : 0;
-  const nightAvg = nightPoints.length > 0 ? calculateLogAverage(nightPoints.map(p => p.value)) : 0;
-
-  const hourlyAvgs: HourlyAvg[] = [];
-  for (let hour = 0; hour < 24; hour++) {
-    const hourPoints = points.filter(p => p.hour === hour);
-
-    if (hourPoints.length > 0) {
-      const hourValues = hourPoints.map(p => p.value).sort((a, b) => a - b);
-
-      hourlyAvgs.push({
-        hour,
-        avg: calculateLogAverage(hourPoints.map(p => p.value)),
-        min: Math.min(...hourValues),
-        max: Math.max(...hourValues),
-        count: hourPoints.length,
-        p5: getAcousticPercentile(hourValues, 5),
-        p10: getAcousticPercentile(hourValues, 10),
-        p90: getAcousticPercentile(hourValues, 90),
-        p95: getAcousticPercentile(hourValues, 95),
-      });
-    }
-  }
-
-  return { min, max, avg, median, p10, p90, dayAvg, nightAvg, hourlyAvgs };
-}
 
 export default function Home() {
   const [noiseData, setNoiseData] = useState<NoiseData | null>(null);
