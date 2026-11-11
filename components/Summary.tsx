@@ -194,11 +194,15 @@ export default function Summary({
     const statistikyData = [
       ['HODINOVÉ STATISTIKY'],
       [],
-      ['Čas', 'LAeq [dB(A)]', 'p5 [dB(A)]', 'p10 [dB(A)]', 'p90 [dB(A)]', 'p95 [dB(A)]'],
+      ['Čas', 'LAeq [dB(A)]', 'p5 [dB(A)]', 'p10 [dB(A)]', 'p90 [dB(A)]', 'p95 [dB(A)]', 'Pokrytí [%]'],
     ];
 
-    // Přeuspořádané hodiny
-    const reorderedHours = reorderHours(stats.hourlyAvgs, startHour);
+    // Hodiny s datem (období vyhodnocení) jdou chronologicky, starší data podle startHour.
+    // Řazení podle čísla hodiny (ne podle pozice v poli), aby chybějící hodina nic neposunula.
+    const reorderedHours = stats.hourlyAvgs.every((h) => !!h.datetime)
+      ? stats.hourlyAvgs
+      : Array.from({ length: 24 }, (_, i) => stats.hourlyAvgs.find((h) => h.hour === (startHour + i) % 24))
+          .filter((h): h is NonNullable<typeof h> => !!h);
     reorderedHours.forEach((hourData) => {
       const currentHour = hourData.hour.toString().padStart(2, '0');
       const nextHour = ((hourData.hour + 1) % 24).toString().padStart(2, '0');
@@ -210,8 +214,16 @@ export default function Summary({
         formatCzechNumber(hourData.p10),
         formatCzechNumber(hourData.p90),
         formatCzechNumber(hourData.p95),
+        hourData.coverage !== undefined ? Math.round(hourData.coverage * 100).toString() : '',
       ]);
     });
+    if (stats.window) {
+      statistikyData.push([]);
+      statistikyData.push([
+        'Období vyhodnocení:',
+        `${stats.window.from.replace('T', ' ')} – ${stats.window.to.replace('T', ' ')}`,
+      ]);
+    }
 
     statistikyData.push([]);
     statistikyData.push(['PRŮMĚRY:']);

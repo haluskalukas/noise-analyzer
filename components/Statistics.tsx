@@ -3,6 +3,7 @@
 import { NoiseStats } from '@/types';
 import * as XLSX from 'xlsx';
 import { formatNumber, formatNumberForExcel } from '@/lib/format';
+import { LOW_COVERAGE, formatShortDate } from '@/lib/noiseStats';
 
 interface StatisticsProps {
   stats: NoiseStats;
@@ -37,7 +38,7 @@ export function Statistics({ stats }: StatisticsProps) {
     const hourlyData = [
       ['Hodinové průměry', '', '', '', '', '', ''],
       ['', '', '', '', '', '', ''],
-      ['Hodina', 'Leq (dB)', 'L5 (dB)', 'L10 (dB)', 'L90 (dB)', 'L95 (dB)', 'Počet měření'],
+      ['Hodina', 'Leq (dB)', 'L5 (dB)', 'L10 (dB)', 'L90 (dB)', 'L95 (dB)', 'Počet měření', 'Pokrytí (%)'],
     ];
 
     stats.hourlyAvgs.forEach(hourly => {
@@ -51,6 +52,7 @@ export function Statistics({ stats }: StatisticsProps) {
         formatNumber(hourly.p90),
         formatNumber(hourly.p95),
         hourly.count.toString(),
+        hourly.coverage !== undefined ? Math.round(hourly.coverage * 100).toString() : '',
       ]);
     });
 
@@ -147,12 +149,16 @@ export function Statistics({ stats }: StatisticsProps) {
                 <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   n
                 </th>
+                <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Pokrytí
+                </th>
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
               {stats.hourlyAvgs.map((hourly) => (
                 <tr key={hourly.hour} className={hourly.hour >= 6 && hourly.hour < 22 ? '' : 'bg-blue-50'}>
                   <td className="px-3 py-3 whitespace-nowrap font-medium text-gray-900">
+                    {hourly.datetime && <span className="text-gray-500 font-normal mr-2">{formatShortDate(hourly.datetime)}</span>}
                     {hourly.hour.toString().padStart(2, '0')}:00 - {((hourly.hour + 1) % 24).toString().padStart(2, '0')}:00
                   </td>
                   <td className="px-3 py-3 whitespace-nowrap text-gray-700 font-semibold">
@@ -173,6 +179,16 @@ export function Statistics({ stats }: StatisticsProps) {
                   <td className="px-3 py-3 whitespace-nowrap text-gray-500">
                     {hourly.count}
                   </td>
+                  <td
+                    className={`px-3 py-3 whitespace-nowrap ${
+                      (hourly.coverage ?? 1) < LOW_COVERAGE ? 'text-amber-700 font-semibold' : 'text-gray-500'
+                    }`}
+                    title={hourly.multipleDays ? 'Hodina obsahuje data z více dnů' : undefined}
+                  >
+                    {hourly.coverage !== undefined ? `${Math.round(hourly.coverage * 100)} %` : '–'}
+                    {(hourly.coverage ?? 1) < LOW_COVERAGE && ' ⚠️'}
+                    {hourly.multipleDays && ' (2 dny)'}
+                  </td>
                 </tr>
               ))}
             </tbody>
@@ -188,6 +204,7 @@ export function Statistics({ stats }: StatisticsProps) {
             <li><strong>L<sub>95</sub></strong> = 95% času je hluk vyšší (minimum)</li>
           </ul>
           <p><strong>n</strong> = počet měření</p>
+          <p><strong>Pokrytí</strong> = podíl hodiny, pro který zbyla data po vymazání ruchů; pod {Math.round(LOW_COVERAGE * 100)} % je hodina označena ⚠️</p>
           <p className="text-blue-600">🌙 Modrá = noční doba (22:00-6:00)</p>
         </div>
       </div>

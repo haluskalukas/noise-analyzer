@@ -9,13 +9,13 @@ import { TrafficCounting } from '@/components/TrafficCounting';
 import NoiseCalculator from '@/components/NoiseCalculator';
 import Summary from '@/components/Summary';
 import Weather, { WeatherData } from '@/components/Weather';
-import { NoiseData, TimeFilter } from '@/types';
+import { NoiseData, TimeFilter, EvalWindow, HourlyAvg } from '@/types';
 import { HourlyTrafficCount, GroupedTrafficSummary } from '@/types/traffic';
 import { initializeHourlyCounts, calculateTrafficSummary, calculateGroupedSummary, calculateTP189GroupedSummary } from '@/lib/trafficCalculations';
 import { RoadType } from '@/lib/tp189coefficients';
 import { calculateRPDI } from '@/lib/rpdiCalculator';
 import { calculateNoise } from '@/lib/noiseCalculator';
-import { calculateStats } from '@/lib/noiseStats';
+import { calculateStats, defaultEvalWindow, repairTimeline, samplingIntervalMs, LOW_COVERAGE, formatShortDate, fromLocalDateTime } from '@/lib/noiseStats';
 import { format } from 'date-fns';
 import { cs } from 'date-fns/locale';
 
@@ -26,6 +26,8 @@ export default function Home() {
   const [timeFilter, setTimeFilter] = useState<TimeFilter>({ type: 'all' });
   const [activeTab, setActiveTab] = useState<'chart' | 'stats' | 'counting' | 'noise' | 'summary' | 'weather'>('chart');
   const [deletedIndices, setDeletedIndices] = useState<Set<number>>(new Set());
+  // Období vyhodnocení (null = výchozích 24 h od první celé hodiny měření)
+  const [evalWindow, setEvalWindow] = useState<EvalWindow | null>(null);
 
   // Traffic counting state (zachováváno mezi kartami)
   const [trafficCounts, setTrafficCounts] = useState<HourlyTrafficCount[]>(initializeHourlyCounts());
@@ -55,16 +57,19 @@ export default function Home() {
           const restoredData = {
             ...parsed.noiseData,
             date: new Date(parsed.noiseData.date),
-            points: parsed.noiseData.points.map((p: any) => ({
+            points: repairTimeline(parsed.noiseData.points.map((p: any) => ({
               ...p,
               datetime: new Date(p.datetime),
-            })),
+            }))),
           };
           setNoiseData(restoredData);
         }
 
         if (parsed.deletedIndices) {
           setDeletedIndices(new Set(parsed.deletedIndices));
+        }
+        if (parsed.evalWindow) {
+          setEvalWindow(parsed.evalWindow);
         }
         if (parsed.timeFilter) {
           setTimeFilter(parsed.timeFilter);
@@ -115,6 +120,7 @@ export default function Home() {
         const toSave = {
           noiseData,
           deletedIndices: Array.from(deletedIndices),
+          evalWindow,
           timeFilter,
           activeTab,
           trafficCounts,
@@ -134,7 +140,13 @@ export default function Home() {
         console.error('Error saving state:', error);
       }
     }
-  }, [noiseData, deletedIndices, timeFilter, activeTab, trafficCounts, countingDate, roadType, showRPDI, speed, summaryAddress, summaryFacadeReflection, summaryUncertainty, summaryRoadBefore2001, weatherData]);
+  }, [noiseData, deletedIndices, evalWindow, timeFilter, activeTab, trafficCounts, countingDate, roadType, showRPDI, speed, summaryAddress, summaryFacadeReflection, summaryUncertainty, summaryRoadBefore2001, weatherData]);
+
+  // Období vyhodnocení: zadané uživatelem, jinak výchozích 24 h z dat
+  const activeWindow = useMemo<EvalWindow | null>(
+    () => evalWindow ?? (noiseData ? defaultEvalWindow(noiseData.points) : null),
+    [evalWindow, noiseData],
+  );
 
   // Recalculate statistics when data is deleted
   const currentStats = useMemo(() => {
@@ -145,8 +157,9 @@ export default function Home() {
 
     if (activePoints.length === 0) return noiseData.stats;
 
-    // Recalculate stats with active points
-    const recalculated = calculateStats(activePoints);
+    // Recalculate stats with active points (jen v období vyhodnocení)
+    // Interval vzorkování ze všech bodů (vymazané úseky by ho zkreslily)
+    const recalculated = calculateStats(activePoints, activeWindow, samplingIntervalMs(noiseData.points));
 
     console.log('Stats recalculated:', {
       totalPoints: noiseData.points.length,
@@ -157,7 +170,7 @@ export default function Home() {
     });
 
     return recalculated;
-  }, [noiseData, deletedIndices]);
+  }, [noiseData, deletedIndices, activeWindow]);
 
   // Calculate grouped data for noise calculator
   const countingGrouped = useMemo<GroupedTrafficSummary | null>(() => {
@@ -237,10 +250,12 @@ export default function Home() {
     setNoiseData(data);
     setTimeFilter({ type: 'all' });
     setDeletedIndices(new Set());
+    setEvalWindow(null);
   };
 
   const handleReset = () => {
     setNoiseData(null);
+    setEvalWindow(null);
     setTimeFilter({ type: 'all' });
     setActiveTab('chart');
     setDeletedIndices(new Set());
@@ -277,6 +292,7 @@ export default function Home() {
             stats: currentStats || noiseData.stats,
           } : null,
           deletedIndices: Array.from(deletedIndices),
+          evalWindow,
           timeFilter,
           activeTab,
         },
@@ -317,6 +333,7 @@ export default function Home() {
       if (data.deletedIndices) {
         setDeletedIndices(new Set(data.deletedIndices));
       }
+      setEvalWindow(data.evalWindow ?? null);
       if (data.timeFilter) {
         setTimeFilter(data.timeFilter);
       }
@@ -345,6 +362,7 @@ export default function Home() {
         data: {
           noiseData,
           deletedIndices: Array.from(deletedIndices),
+          evalWindow,
           timeFilter,
           activeTab,
           // Traffic counting data
@@ -405,10 +423,10 @@ export default function Home() {
           const restoredData = {
             ...data.noiseData,
             date: new Date(data.noiseData.date),
-            points: data.noiseData.points.map((p: any) => ({
+            points: repairTimeline(data.noiseData.points.map((p: any) => ({
               ...p,
               datetime: new Date(p.datetime),
-            })),
+            }))),
           };
           setNoiseData(restoredData);
         }
@@ -417,6 +435,7 @@ export default function Home() {
         if (data.deletedIndices) {
           setDeletedIndices(new Set(data.deletedIndices));
         }
+        setEvalWindow(data.evalWindow ?? null);
         if (data.timeFilter) {
           setTimeFilter(data.timeFilter);
         }
@@ -646,6 +665,17 @@ export default function Home() {
               </div>
             </div>
 
+            {/* Období vyhodnocení */}
+            {activeWindow && (
+              <EvalWindowCard
+                win={activeWindow}
+                isDefault={evalWindow === null}
+                onChange={setEvalWindow}
+                onReset={() => setEvalWindow(null)}
+                hourly={currentStats?.hourlyAvgs ?? []}
+              />
+            )}
+
             {/* Tabs */}
             <div className="bg-white rounded-lg shadow-sm">
               <div className="border-b border-gray-200">
@@ -806,5 +836,84 @@ function TabButton({
     >
       {label}
     </button>
+  );
+}
+
+function EvalWindowCard({
+  win,
+  isDefault,
+  onChange,
+  onReset,
+  hourly,
+}: {
+  win: EvalWindow;
+  isDefault: boolean;
+  onChange: (w: EvalWindow) => void;
+  onReset: () => void;
+  hourly: HourlyAvg[];
+}) {
+  const fromMs = fromLocalDateTime(win.from).getTime();
+  const toMs = fromLocalDateTime(win.to).getTime();
+  const hours = Math.round(((toMs - fromMs) / 3600000) * 10) / 10;
+  const lowCoverage = hourly.filter(h => (h.coverage ?? 1) < LOW_COVERAGE);
+  const missingHours = 24 - hourly.length;
+
+  return (
+    <div className="bg-white rounded-lg shadow-sm p-6">
+      <h3 className="text-lg font-semibold text-gray-900 mb-1">Období vyhodnocení</h3>
+      <p className="text-sm text-gray-600 mb-4">
+        Statistiky, průměry den/noc a export se počítají jen z dat v tomto období.
+        Každá hodina tak pochází z jednoho dne (u měření delšího než 24 h se hodiny neslévají).
+      </p>
+      <div className="flex flex-wrap items-end gap-4">
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Od</label>
+          <input
+            type="datetime-local"
+            value={win.from}
+            onChange={(e) => e.target.value && onChange({ ...win, from: e.target.value })}
+            className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+          />
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Do</label>
+          <input
+            type="datetime-local"
+            value={win.to}
+            onChange={(e) => e.target.value && onChange({ ...win, to: e.target.value })}
+            className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+          />
+        </div>
+        <button
+          onClick={onReset}
+          disabled={isDefault}
+          className="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          Výchozí (24 h od první celé hodiny)
+        </button>
+        <span className="text-sm text-gray-600">
+          Délka: <strong>{hours.toString().replace('.', ',')} h</strong>
+          {isDefault && ' (výchozí)'}
+        </span>
+      </div>
+
+      {(hours !== 24 || lowCoverage.length > 0 || missingHours > 0) && (
+        <div className="mt-4 p-3 bg-amber-50 border border-amber-200 rounded-lg text-sm text-amber-800 space-y-1">
+          {hours > 24 && (
+            <p>⚠️ Období je delší než 24 h – stejné hodiny ze dvou dnů se sloučí do jedné.</p>
+          )}
+          {hours < 24 && <p>⚠️ Období je kratší než 24 h.</p>}
+          {missingHours > 0 && <p>⚠️ V období chybí data pro {missingHours} h.</p>}
+          {lowCoverage.length > 0 && (
+            <p>
+              ⚠️ Hodiny s daty pod {Math.round(LOW_COVERAGE * 100)} % (po vymazání ruchů):{' '}
+              {lowCoverage
+                .map(h => `${h.datetime ? formatShortDate(h.datetime) + ' ' : ''}${h.hour.toString().padStart(2, '0')}:00 (${Math.round((h.coverage ?? 0) * 100)} %)`)
+                .join(', ')}
+            </p>
+          )}
+        </div>
+      )}
+    </div>
   );
 }
