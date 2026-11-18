@@ -7,7 +7,7 @@ import { HourlyTrafficCount, GroupedTrafficSummary } from '@/types/traffic';
 import { calculateTrafficSummary } from '@/lib/trafficCalculations';
 import { calculateNoise } from '@/lib/noiseCalculator';
 import { WeatherData, formatWeatherDate } from '@/components/Weather';
-import { buildProtocolSheet } from '@/lib/protocolSheet';
+import { buildProtocolSheet, defaultStartHour, orderWeatherFrom, orderHourlyFrom } from '@/lib/protocolSheet';
 
 interface SummaryProps {
   measuredDayAvg: number; // naměřený průměr den ze statistik
@@ -61,7 +61,10 @@ export default function Summary({
   const [internalFacadeReflection, setInternalFacadeReflection] = useState<boolean>(false);
   const [internalUncertainty, setInternalUncertainty] = useState<number>(1.8);
   const [internalRoadBefore2001, setInternalRoadBefore2001] = useState<boolean>(false);
-  const [startHour, setStartHour] = useState<number>(0);
+  // Hodina začátku tabulek v exportu: výchozí = začátek období vyhodnocení, lze změnit
+  const [startHourOverride, setStartHour] = useState<number | null>(null);
+  const autoStartHour = defaultStartHour(stats);
+  const startHour = startHourOverride ?? autoStartHour;
 
   const address = externalAddress ?? internalAddress;
   const facadeReflection = externalFacadeReflection ?? internalFacadeReflection;
@@ -124,16 +127,6 @@ export default function Summary({
   // Vyhodnocení limitu
   const exceedsLimitDay = finalDay !== null && finalDay > limitDay;
   const exceedsLimitNight = finalNight !== null && finalNight > limitNight;
-
-  // Helper funkce pro přeuspořádání hodin od startHour
-  const reorderHours = (data: any[], startHour: number) => {
-    const reordered = [];
-    for (let i = 0; i < 24; i++) {
-      const hour = (startHour + i) % 24;
-      reordered.push(data[hour]);
-    }
-    return reordered;
-  };
 
   // Export do Excelu
   const handleExcelExport = () => {
@@ -217,12 +210,8 @@ export default function Summary({
       ['Čas', 'LAeq [dB(A)]', 'p5 [dB(A)]', 'p10 [dB(A)]', 'p90 [dB(A)]', 'p95 [dB(A)]', 'Pokrytí [%]'],
     ];
 
-    // Hodiny s datem (období vyhodnocení) jdou chronologicky, starší data podle startHour.
-    // Řazení podle čísla hodiny (ne podle pozice v poli), aby chybějící hodina nic neposunula.
-    const reorderedHours = stats.hourlyAvgs.every((h) => !!h.datetime)
-      ? stats.hourlyAvgs
-      : Array.from({ length: 24 }, (_, i) => stats.hourlyAvgs.find((h) => h.hour === (startHour + i) % 24))
-          .filter((h): h is NonNullable<typeof h> => !!h);
+    // Hodiny od zvolené hodiny začátku (podle čísla hodiny, chybějící hodina nic neposune)
+    const reorderedHours = orderHourlyFrom(stats.hourlyAvgs, startHour);
     reorderedHours.forEach((hourData) => {
       const currentHour = hourData.hour.toString().padStart(2, '0');
       const nextHour = ((hourData.hour + 1) % 24).toString().padStart(2, '0');
@@ -254,14 +243,16 @@ export default function Summary({
     XLSX.utils.book_append_sheet(workbook, ws2, 'Statistiky');
 
     // ===== LIST 3: SČÍTÁNÍ DOPRAVY =====
-    const scitaniData = [
+    const scitaniData: (string | number)[][] = [
       ['24HODINOVÁ TABULKA SČÍTÁNÍ'],
       [],
       ['Čas', 'OA', 'LN', 'N', 'A', 'M', 'K'],
     ];
 
     // Přeuspořádané hodiny sčítání
-    const reorderedTraffic = reorderHours(trafficCounts, startHour);
+    const reorderedTraffic = Array.from({ length: 24 }, (_, i) =>
+      trafficCounts.find((t) => t.hour === (startHour + i) % 24),
+    ).filter((t): t is HourlyTrafficCount => !!t);
     reorderedTraffic.forEach((hourData, index) => {
       const currentHour = hourData.hour.toString().padStart(2, '0');
       const nextHour = ((hourData.hour + 1) % 24).toString().padStart(2, '0');
@@ -507,8 +498,7 @@ export default function Summary({
         return directions[index];
       };
 
-      // Nová data mají u každé hodiny datum a čas (období od–do) – jdou chronologicky.
-      // Starší projekty mají jen hodinu 0–23 – ty se jako dřív seřadí podle startHour.
+      // Od zvolené hodiny začátku, jen hodiny z období vyhodnocení (24 řádků jako ostatní tabulky).
       const hasDatetime = weatherData.every((d) => !!d.datetime);
 
       const pocasiData = [
@@ -520,9 +510,7 @@ export default function Summary({
         ],
       ];
 
-      const orderedWeather: WeatherData[] = hasDatetime
-        ? [...weatherData].sort((a, b) => (a.datetime! < b.datetime! ? -1 : 1))
-        : reorderHours(weatherData, startHour);
+      const orderedWeather: WeatherData[] = orderWeatherFrom(weatherData, startHour, stats.window);
 
       orderedWeather.forEach((data) => {
         const currentHour = data.hour.toString().padStart(2, '0');
@@ -673,8 +661,19 @@ export default function Summary({
               ))}
             </select>
             <p className="text-xs text-gray-500 mt-1">
-              Tabulky v Excelu budou začínat od této hodiny
+              Všechny tabulky v Excelu (i list Protokol) začnou od této hodiny.
+              {startHourOverride === null
+                ? ' Nastaveno podle začátku období vyhodnocení.'
+                : ''}
             </p>
+            {startHourOverride !== null && startHourOverride !== autoStartHour && (
+              <button
+                onClick={() => setStartHour(null)}
+                className="text-xs text-blue-600 hover:underline mt-1"
+              >
+                Vrátit na začátek období vyhodnocení ({autoStartHour.toString().padStart(2, '0')}:00)
+              </button>
+            )}
           </div>
           <div className="flex-1">
             <button
