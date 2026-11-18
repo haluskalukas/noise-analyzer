@@ -14,7 +14,7 @@ export interface ProtocolSheetInput {
   stats: NoiseStats;
   trafficCounts: HourlyTrafficCount[];
   weatherData: WeatherData[];
-  startHour: number; // hodina, kterou začínají tabulky (když není období vyhodnocení)
+  startHour: number; // hodina, kterou začínají všechny tabulky
   reflectionCorrection: number; // -2 nebo 0
   rpdiCorrectionDay: number;
   rpdiCorrectionNight: number;
@@ -85,10 +85,44 @@ const czDate = (s: string) => {
 /** Pořadí hodin 0–23 začínající danou hodinou. */
 const hourOrder = (start: number) => Array.from({ length: 24 }, (_, i) => (start + i) % 24);
 
+/** Výchozí hodina začátku tabulek: začátek období vyhodnocení, jinak 0. */
+export function defaultStartHour(stats?: NoiseStats | null): number {
+  return stats?.window ? Number(stats.window.from.slice(11, 13)) : 0;
+}
+
+/**
+ * Meteo pro tabulky od zvolené hodiny, 24 řádků jako ostatní tabulky.
+ * S datem se berou jen hodiny v období vyhodnocení (když je), pak se řadí
+ * podle čísla hodiny od startHour – stejně jako hodinové hodnoty a doprava.
+ */
+export function orderWeatherFrom(
+  weatherData: WeatherData[],
+  startHour: number,
+  window?: { from: string; to: string } | null,
+): WeatherData[] {
+  let rows = weatherData;
+  if (window && weatherData.every(w => !!w.datetime)) {
+    const inWindow = weatherData.filter(w => w.datetime! >= window.from.slice(0, 13) + ':00' && w.datetime! < window.to);
+    if (inWindow.length > 0) rows = inWindow;
+  }
+  const sorted = rows.every(w => !!w.datetime)
+    ? [...rows].sort((a, b) => (a.datetime! < b.datetime! ? -1 : 1))
+    : rows;
+  return hourOrder(startHour)
+    .map(h => sorted.find(w => w.hour === h))
+    .filter((w): w is WeatherData => !!w);
+}
+
+/** Hodinové statistiky od zvolené hodiny (podle čísla hodiny, chybějící hodina nic neposune). */
+export function orderHourlyFrom(hourly: HourlyAvg[], startHour: number): HourlyAvg[] {
+  return hourOrder(startHour)
+    .map(h => hourly.find(x => x.hour === h))
+    .filter((x): x is HourlyAvg => !!x);
+}
+
 export function buildProtocolSheet(input: ProtocolSheetInput): Cell[][] {
   const { stats, trafficCounts, weatherData, address } = input;
-  const start = stats.window ? Number(stats.window.from.slice(11, 13)) : input.startHour;
-  const order = hourOrder(start);
+  const order = hourOrder(input.startHour);
   const r = protocolResults(
     stats, input.reflectionCorrection, input.rpdiCorrectionDay, input.rpdiCorrectionNight,
     input.uncertainty, input.roadBefore2001,
@@ -107,9 +141,7 @@ export function buildProtocolSheet(input: ProtocolSheetInput): Cell[][] {
   if (weatherData.length > 0) {
     rows.push(['Přehled meteorologických podmínek během měření']);
     rows.push(['datum', 'čas', 't (°C)', 'Rh (%)', 'Pn (hPa)', 'v (km/h)', 'směr větru (-)']);
-    const ordered = weatherData.every(w => !!w.datetime)
-      ? [...weatherData].sort((a, b) => (a.datetime! < b.datetime! ? -1 : 1))
-      : order.map(h => weatherData.find(w => w.hour === h)).filter((w): w is WeatherData => !!w);
+    const ordered = orderWeatherFrom(weatherData, input.startHour, stats.window);
     let lastDate = '';
     for (const w of ordered) {
       const date = w.datetime ? czDate(w.datetime) : '';
@@ -146,9 +178,7 @@ export function buildProtocolSheet(input: ProtocolSheetInput): Cell[][] {
   // ----- Naměřené hodnoty -----
   rows.push(['Naměřené hodnoty']);
   rows.push(['hodina', '', '', 'LAeq,T (dB)', 'L5 (dB)', 'L10 (dB)', 'L90 (dB)', 'L95 (dB)']);
-  const hourly: HourlyAvg[] = stats.hourlyAvgs.every(h => !!h.datetime) && stats.window
-    ? stats.hourlyAvgs
-    : order.map(h => stats.hourlyAvgs.find(x => x.hour === h)).filter((x): x is HourlyAvg => !!x);
+  const hourly = orderHourlyFrom(stats.hourlyAvgs, input.startHour);
   for (const h of hourly) {
     rows.push([`${h.hour}:00`, '-', `${(h.hour + 1) % 24}:00`, cz(h.avg), cz(h.p5), cz(h.p10), cz(h.p90), cz(h.p95)]);
   }
