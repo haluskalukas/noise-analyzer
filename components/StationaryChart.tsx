@@ -1,7 +1,7 @@
 'use client';
 
 import { useMemo, useState, useRef, useEffect } from 'react';
-import { StationaryDataPoint } from '@/types/stationary';
+import { StationaryDataPoint, STATIONARY_FREQUENCY_LIST } from '@/types/stationary';
 import { format } from 'date-fns';
 import { formatNumber } from '@/lib/format';
 
@@ -9,6 +9,17 @@ interface StationaryChartProps {
   data: StationaryDataPoint[];
   onSourceSelection?: (startIdx: number, endIdx: number, points: StationaryDataPoint[]) => void;
 }
+
+// Barvy čar jednotlivých pásem (střídají se, aby sousední pásma šla rozlišit)
+const BAND_COLORS = [
+  '#e11d48', '#ea580c', '#ca8a04', '#16a34a', '#0d9488', '#0284c7', '#7c3aed', '#c026d3',
+  '#be123c', '#9a3412', '#4d7c0f', '#047857', '#0e7490', '#1d4ed8', '#6d28d9', '#a21caf',
+];
+const bandColor = (band: number) => BAND_COLORS[band % BAND_COLORS.length];
+const bandLabel = (band: number) => {
+  const f = STATIONARY_FREQUENCY_LIST[band];
+  return f >= 1000 ? `${(f / 1000).toString().replace('.', ',')} kHz` : `${f.toString().replace('.', ',')} Hz`;
+};
 
 export function StationaryChart({ data, onSourceSelection }: StationaryChartProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -25,6 +36,11 @@ export function StationaryChart({ data, onSourceSelection }: StationaryChartProp
   const [canvasSize, setCanvasSize] = useState({ width: 800, height: 500 });
   const [wheelZoomEnabled, setWheelZoomEnabled] = useState(true);
   const [altKeyPressed, setAltKeyPressed] = useState(false);
+  // Zobrazení v grafu: LAeq a vybraná třetinooktávová pásma (indexy 0–30)
+  const [showLaeq, setShowLaeq] = useState(true);
+  const [selectedBands, setSelectedBands] = useState<number[]>([]);
+  const toggleBand = (band: number) =>
+    setSelectedBands(prev => (prev.includes(band) ? prev.filter(b => b !== band) : [...prev, band].sort((a, b) => a - b)));
 
   // Convert data to chart format
   const chartData = useMemo(() => {
@@ -36,6 +52,7 @@ export function StationaryChart({ data, onSourceSelection }: StationaryChartProp
       return {
         datetime,
         value: point.laeq,
+        frequencies: point.frequencies,
         hour: datetime.getHours(),
         minute: datetime.getMinutes(),
       };
@@ -140,10 +157,24 @@ export function StationaryChart({ data, onSourceSelection }: StationaryChartProp
 
     if (visibleData.length === 0) return;
 
-    // Calculate Y domain
-    const visibleValues = visibleData.map(d => d.value);
-    const yMin = Math.floor(Math.min(...visibleValues) - 5);
-    const yMax = Math.ceil(Math.max(...visibleValues) + 5);
+    // Calculate Y domain (LAeq a vybraná pásma; cyklem, ne Math.min(...) – ten u velkých dat padá)
+    let vMin = Infinity;
+    let vMax = -Infinity;
+    for (const d of visibleData) {
+      if (showLaeq || selectedBands.length === 0) {
+        if (d.value < vMin) vMin = d.value;
+        if (d.value > vMax) vMax = d.value;
+      }
+      for (const b of selectedBands) {
+        const v = d.frequencies?.[b];
+        if (v === undefined || !isFinite(v)) continue;
+        if (v < vMin) vMin = v;
+        if (v > vMax) vMax = v;
+      }
+    }
+    if (!isFinite(vMin) || !isFinite(vMax)) { vMin = 0; vMax = 100; }
+    const yMin = Math.floor(vMin - 5);
+    const yMax = Math.ceil(vMax + 5);
 
     // Helper functions
     const xScale = (index: number) => {
@@ -203,25 +234,63 @@ export function StationaryChart({ data, onSourceSelection }: StationaryChartProp
       ctx.restore();
     }
 
-    // Draw data line
-    ctx.strokeStyle = '#3b82f6';
-    ctx.lineWidth = 2.5;
-    ctx.lineJoin = 'round';
-    ctx.lineCap = 'round';
-    ctx.beginPath();
-
-    for (let i = 0; i < visibleData.length; i++) {
-      const x = xScale(i);
-      const y = yScale(visibleData[i].value);
-
-      if (i === 0) {
-        ctx.moveTo(x, y);
+    // Vybraná pásma – při více bodech než pixelů se kreslí obálka min/max na pixel (zachová špičky)
+    const drawBand = (band: number) => {
+      ctx.strokeStyle = bandColor(band);
+      ctx.lineWidth = 1.5;
+      ctx.lineJoin = 'round';
+      ctx.lineCap = 'round';
+      ctx.beginPath();
+      const n = visibleData.length;
+      const perPixel = n / Math.max(1, chartWidth);
+      let started = false;
+      const point = (x: number, v: number) => {
+        const y = yScale(v);
+        if (!started) { ctx.moveTo(x, y); started = true; } else ctx.lineTo(x, y);
+      };
+      if (perPixel <= 2) {
+        for (let i = 0; i < n; i++) point(xScale(i), visibleData[i].frequencies?.[band] ?? 0);
       } else {
-        ctx.lineTo(x, y);
+        for (let px = 0; px < chartWidth; px++) {
+          const from = Math.floor(px * perPixel);
+          const to = Math.min(n, Math.floor((px + 1) * perPixel));
+          let lo = Infinity;
+          let hi = -Infinity;
+          for (let i = from; i < to; i++) {
+            const v = visibleData[i].frequencies?.[band] ?? 0;
+            if (v < lo) lo = v;
+            if (v > hi) hi = v;
+          }
+          if (!isFinite(lo)) continue;
+          point(margin.left + px, lo);
+          point(margin.left + px, hi);
+        }
       }
-    }
+      ctx.stroke();
+    };
+    selectedBands.forEach(drawBand);
 
-    ctx.stroke();
+    // Draw data line (LAeq)
+    if (showLaeq || selectedBands.length === 0) {
+      ctx.strokeStyle = '#3b82f6';
+      ctx.lineWidth = 2.5;
+      ctx.lineJoin = 'round';
+      ctx.lineCap = 'round';
+      ctx.beginPath();
+
+      for (let i = 0; i < visibleData.length; i++) {
+        const x = xScale(i);
+        const y = yScale(visibleData[i].value);
+
+        if (i === 0) {
+          ctx.moveTo(x, y);
+        } else {
+          ctx.lineTo(x, y);
+        }
+      }
+
+      ctx.stroke();
+    }
 
     // Draw selection rectangle if dragging in selection mode
     if (isDragging && dragMode === 'select') {
@@ -298,7 +367,7 @@ export function StationaryChart({ data, onSourceSelection }: StationaryChartProp
     ctx.save();
     ctx.translate(15, height / 2);
     ctx.rotate(-Math.PI / 2);
-    ctx.fillText('LAeq (dB)', 0, 0);
+    ctx.fillText(selectedBands.length > 0 ? 'Hladina (dB)' : 'LAeq (dB)', 0, 0);
     ctx.restore();
 
     // Draw hover tooltip
@@ -307,14 +376,22 @@ export function StationaryChart({ data, onSourceSelection }: StationaryChartProp
       const x = xScale(hoveredPoint);
       const y = yScale(point.value);
 
-      const tooltipText = `${formatNumber(point.value)} dB`;
+      const tooltipText = `LAeq ${formatNumber(point.value)} dB`;
       const time = format(point.datetime, 'HH:mm:ss');
+      const bandLines = selectedBands.map(b => ({
+        band: b,
+        text: `${bandLabel(b)}: ${formatNumber(point.frequencies?.[b] ?? 0)} dB`,
+      }));
 
       ctx.font = '12px sans-serif';
-      const textWidth = Math.max(ctx.measureText(tooltipText).width, ctx.measureText(time).width);
+      const textWidth = Math.max(
+        ctx.measureText(tooltipText).width,
+        ctx.measureText(time).width,
+        ...bandLines.map(l => ctx.measureText(l.text).width + 14),
+      );
 
-      const tooltipX = x + 15;
-      const tooltipY = y - 35;
+      const tooltipX = Math.min(x + 15, width - margin.right - textWidth - 20);
+      const tooltipY = Math.max(margin.top, y - 35);
       const tooltipPadding = 8;
 
       // Tooltip background
@@ -322,7 +399,7 @@ export function StationaryChart({ data, onSourceSelection }: StationaryChartProp
       ctx.strokeStyle = '#3b82f6';
       ctx.lineWidth = 2;
       ctx.beginPath();
-      ctx.roundRect(tooltipX, tooltipY, textWidth + tooltipPadding * 2, 40, 6);
+      ctx.roundRect(tooltipX, tooltipY, textWidth + tooltipPadding * 2, 40 + bandLines.length * 16, 6);
       ctx.fill();
       ctx.stroke();
 
@@ -336,9 +413,19 @@ export function StationaryChart({ data, onSourceSelection }: StationaryChartProp
       ctx.font = '11px sans-serif';
       ctx.fillStyle = '#6b7280';
       ctx.fillText(time, tooltipX + tooltipPadding, tooltipY + 33);
+
+      // Hodnoty vybraných pásem s barevnou značkou
+      bandLines.forEach((l, i) => {
+        const ly = tooltipY + 50 + i * 16;
+        ctx.fillStyle = bandColor(l.band);
+        ctx.fillRect(tooltipX + tooltipPadding, ly - 8, 10, 3);
+        ctx.fillStyle = '#1f2937';
+        ctx.font = '11px sans-serif';
+        ctx.fillText(l.text, tooltipX + tooltipPadding + 14, ly - 3);
+      });
     }
 
-  }, [chartData, canvasSize, zoom, pan, isDragging, dragMode, dragStartPos, currentMousePos, hoveredPoint]);
+  }, [chartData, canvasSize, zoom, pan, isDragging, dragMode, dragStartPos, currentMousePos, hoveredPoint, showLaeq, selectedBands]);
 
   // Mouse handlers
   const handleMouseDown = (e: React.MouseEvent<HTMLCanvasElement>) => {
@@ -528,6 +615,47 @@ export function StationaryChart({ data, onSourceSelection }: StationaryChartProp
             <span>Drž <kbd className="px-1.5 py-0.5 bg-white rounded border border-purple-300 font-mono text-xs">Alt/Option</kbd> + táhni myší = označí interval měření</span>
           </div>
         </div>
+      </div>
+
+      {/* Výběr zobrazených frekvencí */}
+      <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-200">
+        <div className="flex items-center justify-between flex-wrap gap-2 mb-3">
+          <span className="text-sm font-semibold text-gray-800">Zobrazit v grafu</span>
+          <div className="flex items-center gap-2 text-xs">
+            <label className="flex items-center gap-2 cursor-pointer px-2 py-1 rounded border border-blue-300">
+              <input type="checkbox" checked={showLaeq} onChange={(e) => setShowLaeq(e.target.checked)} className="w-4 h-4" />
+              <span className="font-medium text-blue-700">LAeq</span>
+            </label>
+            <button
+              onClick={() => setSelectedBands([])}
+              disabled={selectedBands.length === 0}
+              className="px-2 py-1 rounded border border-gray-300 text-gray-700 hover:bg-gray-100 disabled:opacity-40"
+            >
+              Zrušit výběr pásem
+            </button>
+          </div>
+        </div>
+        <div className="flex flex-wrap gap-1">
+          {STATIONARY_FREQUENCY_LIST.map((_, band) => {
+            const on = selectedBands.includes(band);
+            return (
+              <button
+                key={band}
+                onClick={() => toggleBand(band)}
+                className={`px-2 py-1 rounded text-xs font-medium border transition-colors ${
+                  on ? 'text-white border-transparent' : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
+                }`}
+                style={on ? { backgroundColor: bandColor(band) } : undefined}
+                aria-pressed={on}
+              >
+                {bandLabel(band)}
+              </button>
+            );
+          })}
+        </div>
+        {!showLaeq && selectedBands.length === 0 && (
+          <p className="mt-2 text-xs text-gray-500">Není vybráno nic – zobrazuje se LAeq.</p>
+        )}
       </div>
 
       {/* Canvas Chart */}
